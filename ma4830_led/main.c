@@ -114,11 +114,6 @@ bool check_input (char str[], double *save_value, uint8_t param)
   return true;
 }
 
-
-void get_values()
-{
-
-}
 int main () {
 
 
@@ -150,8 +145,6 @@ int main () {
 
 	float guess;
 	int tries;
-
-	printf("\fDemonstration Routine for PCI-DAS 1602\n\n");
 
 	memset(&info,0,sizeof(info));
 	if(pci_attach(0)<0) {
@@ -197,17 +190,20 @@ int main () {
 		perror("Thread Control");
 		exit(1);
 	}
-
+	out8(DIO_CTLREG, 0x90);
+	out8(DIO_PORTB, 0x00);
 	system("clear");
 
 	printf("Hi! Welcome to a C Language Program to : \"Compute the Trajectory of A Projectile\".\n\n");
-	printf("In order to compute the trajectory of a projectile, we would need 3 parameters. They are:-\n");
+	printf("In order to compute the trajectory of a projectile, this program needs 3 parameters. They are:-\n");
 	printf("\t- Initial launch angle\n");
 	printf("\t- Initial launch velocity\n");
 	printf("\t- Initial launch height\n\n");
 
 	printf("You can input either 1, 2, or 3 parameters. For options other than 3, the other parameter(s) will be kept constant.\n");
 
+	printf("\n\nThe default values for the parameters if not modified are as follows: \nV: 100m\nH: 100m\nTheta: 45 degrees\n\n");
+	
 	while (true)
 	{ 
 		printf("How many parameters would you like to input?\n");
@@ -258,13 +254,14 @@ int main () {
 	    
 	    while (true)
 	    {
+	    printf("\n");
 		printf("Initial ");
 		if (parameter_selection == ANGLE)
-		printf("angle (in degrees): ");
+		printf("angle (in degrees): \n");
 		else if (parameter_selection == VELOCITY)
-		printf("velocity (in meters per second): ");
+		printf("velocity (in meters per second): \n");
 		else if (parameter_selection == HEIGHT)
-		printf("height (in meters): ");
+		printf("height (in meters): \n");
 
 		scanf("%s", input);
 
@@ -339,13 +336,13 @@ int main () {
 			parameter_selection = parameter_selection | ANGLE    | HEIGHT;
 
 		printf("\nPlease enter the values for your desired parameters.\n");
-		//printf("%d %d", parameter_selection, ANGLE    | VELOCITY);
+		//printf("%d %d\n", parameter_selection, ANGLE    | VELOCITY);
 
 		while (true)
 		{
 			if (parameter_selection == (ANGLE|VELOCITY) )
 			{
-				printf("Initial angle (in degrees): ");
+				printf("Initial angle (in degrees): \n");
 				scanf("%s", input);
 
 				success = false;
@@ -356,7 +353,7 @@ int main () {
 				  
 				while (true)
 				{
-					printf("Initial velocity (in meters per second): ");
+					printf("Initial velocity (in meters per second): \n");
 					scanf("%s", input);
 
 					success = false;
@@ -370,7 +367,7 @@ int main () {
 			}
 			else if (parameter_selection == (VELOCITY|HEIGHT) )
 			{
-				printf("Initial velocity (in meters per second): ");
+				printf("Initial velocity (in meters per second): \n");
 				scanf("%s", input);
 
 				success = false;
@@ -381,7 +378,7 @@ int main () {
 				  
 				while (true)
 				{
-					printf("Initial height (in meters): ");
+					printf("Initial height (in meters): \n");
 
 					scanf("%s", input);
 
@@ -396,7 +393,7 @@ int main () {
 			}
 			else if (parameter_selection == (ANGLE|HEIGHT) )
 			{
-				printf("Initial angle (in degrees): ");
+				printf("Initial angle (in degrees): \n");
 				scanf("%s", input);
 
 				success = false;
@@ -407,7 +404,7 @@ int main () {
 				  
 				while (true)
 				{
-					printf("Initial height (in meters): ");
+					printf("Initial height (in meters): \n");
 
 					scanf("%s", input);
 
@@ -428,7 +425,7 @@ int main () {
 		printf("\n");
 		while (true)
 		{
-			printf("Initial angle (in degrees): ");
+			printf("Initial angle (in degrees): \n");
 			scanf("%s", input);
 
 			success = false;
@@ -439,7 +436,7 @@ int main () {
 
 			while (true)
 			{
-				printf("Initial velocity (in meters per second): ");
+				printf("Initial velocity (in meters per second): \n");
 				scanf("%s", input);
 
 				success = false;
@@ -450,7 +447,7 @@ int main () {
 			  
 				while (true)
 				{
-					printf("Initial height (in meters): ");
+					printf("Initial height (in meters): \n");
 
 					scanf("%s", input);
 
@@ -468,39 +465,51 @@ int main () {
 		}
 	}
 
-	printf("\nEND\n%lf %lf %lf\n", proj_initial.angle, proj_initial.velocity, proj_initial.height);
+	
 
-	sqrtEq_main = 1 +  ((2*G_ACC*(h))/((pow(sin(theta),2)*pow(v,2))));
-	d_main = (pow(v,2)/(2*G_ACC))  *  (1 +  sqrt(sqrtEq) )  *  sin(2*theta);
+	sqrtEq_main = 1 +  ((2*G_ACC*(proj_initial.height))/((pow(sin(proj_initial.angle*PI/180),2)*pow(proj_initial.velocity,2))));
+	d_main = (pow(proj_initial.velocity,2)/(2*G_ACC))  *  (1 +  sqrt(sqrtEq_main) )  *  sin(2*(proj_initial.angle*PI/180));
 
-	out8(DIO_CTLREG, 0x90);
-
+	
+    tries=1;
+    
+    printf("\n\n\nYou have 4 chances to estimate the landing point of the projectile\n");
+    out8(DIO_PORTB, 0xff);
+    
 	while(true)
 	{
-		printf("You have 4 chances to estimate the landing point of the projectile\n");
-		printf("Chance No: %d: ", tries);
-
-		scanf("%f", &guess);
+		printf("\nChance No: %d: \n\n", tries);
 		
-		if(abs(guess-d_main) < 0.001)
+		scanf("%s", input);
+
+		success = false;
+		success = check_str_for_non_digit(input);
+
+		if (!success)
 		{
-			printf("You got it right!!!Congratulations\n");
-			break;
+		printf("\n\nSorry, that is not a valid number. Please enter a valid number.\n\n");
+		continue;
 		}
-		else if(tries > 4)
+
+		guess = strtod(input, NULL);
+		
+		if(abs(guess-d_main) < 0.01)
 		{
-			printf("You have used up your 4 lives\n");
+			out8(DIO_PORTB, 0xff);
+			printf("\n\n\nYou got it right. Congratulations\n\n\n");
 			break;
 		}
 		else
 		{
-			lives--;
-			printf("No of tries so far: %d. You only have %d lives left\n", tries, (4-tries));
-			
+			tries++;
+			printf("\n\nNo of tries so far: %d. You only have %d lives left\n\n", tries, (5-tries));
 		}
-
-		switch((4-tries))
+		
+		switch((5-tries))
 		{
+			case 0:
+				out8(DIO_PORTB, 0x00);
+				break;
 			case 1: 
 				out8(DIO_PORTB, 0x08);
 				break;
@@ -514,9 +523,19 @@ int main () {
 				out8(DIO_PORTB, 0x0f);
 				break;
 		}
+		
+		if(tries == 5)
+		{
+			system("clear");
+			printf("You have used up your 4 lives\n\n\n\n\n\n");
+			break;
+		}
+		
 	}
+	
+	pci_detach_device(hdl);
 
-	printf("This is how the projectile will move!!\n");
+	printf("This is how the projectile will move\n\n\n");
 	compute_trajectory(proj_initial.velocity, proj_initial.height, proj_initial.angle); 
 
 	return 0;

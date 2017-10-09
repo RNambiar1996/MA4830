@@ -173,12 +173,12 @@ int compute_trajectory(float v_input, float h_input, float theta_input) {
 	
 	theta = theta*PI/180;
 
-	printf("\tTRAJECTORY MOTION OF: v = %.5f, h = %.5f, theta = %.5f\n\n",v, h, theta);
+	printf("\tTRAJECTORY MOTION OF: v = %.5f m/s, h = %.5f m, theta = %.5f radians\n\n",v, h, theta);
 
 	dMax = Downfunc(0);
 	yMax = h + pow(v,2)*pow(sin(theta),2)/(2*G_ACC);
-	// printf("This is dMax num>> %f\n", dMax);
-	printf("This is yMax num>> %f\n", yMax);
+	
+	printf("\n\n\nMaximum height to which the projectile rises : %f\n\n\n\n", yMax);
 
 
 	//convert int to str of initial y indentation
@@ -198,7 +198,7 @@ int compute_trajectory(float v_input, float h_input, float theta_input) {
 	y = PlotBelowH(y, deltaX, deltaY, Yindent);
 	PlotXaxis(Yindent, deltaX, dMax);
 
-	printf("This is dMax num>> %f\n", dMax);
+	printf("\n\n\nMaximum horizontal distance of the projectile : %f\n\n", dMax);
 
 	return 0;
     

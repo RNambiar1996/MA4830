@@ -1,0 +1,116 @@
+[2J[HDemonstration Routine for PCI-DAS 1602
+
+Aperture 0  Base 0xd000 Length 64 Type IO
+Aperture 1  Base 0xd0a0 Length 32 Type IO
+Aperture 2  Base 0xd080 Length 32 Type IO
+Aperture 3  Base 0xd060 Length 32 Type IO
+Aperture 4  Base 0xd040 Length 32 Type IO
+IRQ 10
+
+DAS 1602 Base addresses:
+
+Badr[0] : d000
+Badr[1] : d0a0
+Badr[2] : d080
+Badr[3] : d060
+Badr[4] : d040
+
+Reconfirm Iobase:
+Index 0 : Address : d000 IOBASE  : d000 
+Index 1 : Address : d0a0 IOBASE  : d0a0 
+Index 2 : Address : d080 IOBASE  : d080 
+Index 3 : Address : d060 IOBASE  : d060 
+Index 4 : Address : d040 IOBASE  : d040 
+Hi! Welcome to a C Language Program to : "Compute the Trajectory of A Projectile".
+
+In order to compute the trajectory of a projectile, we would need 3 parameters. They are:-
+	- Initial launch angle
+	- Initial launch velocity
+	- Initial launch height
+
+You can input either 1, 2, or 3 parameters. For options other than 3, the other parameter(s) will be kept constant.
+How many parameters would you like to input?
+
+Please enter either 1, 2, [2J[Hor 3. Thank you.
+How many parameters would you like to input?
+
+Which parameter would you like to input?
+	1. Initial launch angle
+	2. Initial launch velocity
+	3. Initial launch height
+Please enter either 1, 2, or 3. Thank you.
+
+Please enter the value for your desired parameter.
+
+Initial angle (in degrees): 
+
+END
+1.000000 10.000000 100.000000
+You have 4 chances to estimate the landing point of the projectile
+Chance No: 1: 
+No of tries so far: 2. You only have 3 lives left
+Chance No: 2: 
+No of tries so far: 3. You only have 2 lives left
+Chance No: 3: 
+No of tries so far: 4. You only have 1 lives left
+Chance No: 4: 
+No of tries so far: 5. You only have 0 lives left
+You have used up your 4 lives
+This is how the projectile will move!!
+	TRAJECTORY MOTION OF: v = 10.00000, h = 100.00000, theta = 0.01745
+
+This is yMax num>> 100.001549
+100.0| x                                                                                                                                                                                  
+98.0 |       x                                                                                                                                                                            
+96.0 |          x                                                                                                                                                                         
+94.0 |            x                                                                                                                                                                       
+92.0 |             x                                                                                                                                                                      
+90.0 |               x                                                                                                                                                                    
+88.0 |                x                                                                                                                                                                   
+86.0 |                  x                                                                                                                                                                 
+84.0 |                   x                                                                                                                                                                
+82.0 |                    x                                                                                                                                                               
+80.0 |                     x                                                                                                                                                              
+78.0 |                      x                                                                                                                                                             
+76.0 |                       x                                                                                                                                                            
+74.0 |                        x                                                                                                                                                           
+72.0 |                         x                                                                                                                                                          
+70.0 |                         x                                                                                                                                                          
+68.0 |                          x                                                                                                                                                         
+66.0 |                           x                                                                                                                                                        
+64.0 |                            x                                                                                                                                                       
+62.0 |                             x                                                                                                                                                      
+60.0 |                             x                                                                                                                                                      
+58.0 |                              x                                                                                                                                                     
+56.0 |                               x                                                                                                                                                    
+54.0 |                               x                                                                                                                                                    
+52.0 |                                x                                                                                                                                                   
+50.0 |                                 x                                                                                                                                                  
+48.0 |                                 x                                                                                                                                                  
+46.0 |                                  x                                                                                                                                                 
+44.0 |                                  x                                                                                                                                                 
+42.0 |                                   x                                                                                                                                                
+40.0 |                                    x                                                                                                                                               
+38.0 |                                    x                                                                                                                                               
+36.0 |                                     x                                                                                                                                              
+34.0 |                                     x                                                                                                                                              
+32.0 |                                      x                                                                                                                                             
+30.0 |                                      x                                                                                                                                             
+28.0 |                                       x                                                                                                                                            
+26.0 |                                        x                                                                                                                                           
+24.0 |                                        x                                                                                                                                           
+22.0 |                                         x                                                                                                                                          
+20.0 |                                         x                                                                                                                                          
+18.0 |                                          x                                                                                                                                         
+16.0 |                                          x                                                                                                                                         
+14.0 |                                           x                                                                                                                                        
+12.0 |                                           x                                                                                                                                        
+10.0 |                                            x                                                                                                                                       
+8.0  |                                            x                                                                                                                                       
+6.0  |                                            x                                                                                                                                       
+4.0  |                                             x                                                                                                                                      
+2.0  |                                             x                                                                                                                                      
+0.0  |                                              x                                                                                                                                     
+____________________________________________________________________________________________________________________________________________________________________________________
+(0,0)          10.000     20.000     30.000     40.001     50.001     60.001     70.001     80.001     90.001     100.002    110.002    120.002    130.002    140.002    150.002    160.002    
+This is dMax num>> 45.323715
