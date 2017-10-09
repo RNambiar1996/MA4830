@@ -9,6 +9,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "printTrajectory.h"
+#include <unistd.h>
+#include <hw/pci.h>
+#include <hw/inout.h>
+#include <sys/neutrino.h>
+#include <sys/mman.h>
 
 //#include <stdarg.h>
 //#include <ncurses.h>
@@ -16,6 +21,35 @@
 	
 #define MAX_ANGLE 90
 #define MIN_ANGLE -90
+
+#define	INTERRUPT		iobase[1] + 0		// Badr1 + 0 : also ADC register
+#define	MUXCHAN		iobase[1] + 2				// Badr1 + 2
+#define	TRIGGER		iobase[1] + 4				// Badr1 + 4
+#define	AUTOCAL		iobase[1] + 6				// Badr1 + 6
+#define 	DA_CTLREG		iobase[1] + 8				// Badr1 + 8
+
+#define 	AD_DATA		iobase[2] + 0				// Badr2 + 0
+#define 	AD_FIFOCLR		iobase[2] + 2				// Badr2 + 2
+
+#define	TIMER0			iobase[3] + 0				// Badr3 + 0
+#define	TIMER1			iobase[3] + 1				// Badr3 + 1
+#define	TIMER2			iobase[3] + 2				// Badr3 + 2
+#define	COUNTCTL		iobase[3] + 3				// Badr3 + 3
+#define	DIO_PORTA		iobase[3] + 4				// Badr3 + 4
+#define	DIO_PORTB		iobase[3] + 5				// Badr3 + 5
+#define	DIO_PORTC		iobase[3] + 6				// Badr3 + 6
+#define	DIO_CTLREG		iobase[3] + 7				// Badr3 + 7
+#define	PACER1			iobase[3] + 8				// Badr3 + 8
+#define	PACER2			iobase[3] + 9				// Badr3 + 9
+#define	PACER3			iobase[3] + a				// Badr3 + a
+#define	PACERCTL		iobase[3] + b				// Badr3 + b
+
+#define 	DA_Data		iobase[4] + 0				// Badr4 + 0
+#define 	DA_FIFOCLR		iobase[4] + 2				// Badr4 + 2
+
+#define	DEBUG						1
+ 	
+int badr[5];			// PCI 2.2 assigns 6 IO base addresses
 
 enum parameter_selection {
   ANGLE = 1,
@@ -87,6 +121,17 @@ void get_values()
 }
 int main () {
 
+
+	struct pci_dev_info info;
+	void *hdl;
+
+	uintptr_t iobase[6];
+	uintptr_t dio_in;
+	uint16_t adc_in;
+	
+	unsigned int i,count;
+	unsigned short chan;
+
 	// Initializations
 	int number_of_parameters;
 	int str_length;
@@ -105,6 +150,53 @@ int main () {
 
 	float guess;
 	int tries;
+
+	printf("\fDemonstration Routine for PCI-DAS 1602\n\n");
+
+	memset(&info,0,sizeof(info));
+	if(pci_attach(0)<0) {
+		perror("pci_attach");
+		exit(EXIT_FAILURE);
+	}
+		                                                     /* /*Vendor and Device ID */
+	info.VendorId=0x1307;
+	info.DeviceId=0x01;
+
+	if ((hdl=pci_attach_device(0, PCI_SHARE|PCI_INIT_ALL, 0, &info))==0) {
+		perror("pci_attach_device");
+		exit(EXIT_FAILURE);
+	}
+	  
+	for(i=0;i<6;i++) {		// Another printf BUG ? - Break printf to two statements
+		if(info.BaseAddressSize[i]>0) {
+			printf("Aperture %d  Base 0x%x Length %d Type %s\n", i, 
+			PCI_IS_MEM(info.CpuBaseAddress[i]) ?  (int)PCI_MEM_ADDR(info.CpuBaseAddress[i]) : 
+			(int)PCI_IO_ADDR(info.CpuBaseAddress[i]),info.BaseAddressSize[i], 
+			PCI_IS_MEM(info.CpuBaseAddress[i]) ? "MEM" : "IO");
+		}
+	}  
+	    													
+	printf("IRQ %d\n",info.Irq); 		
+						// Assign BADRn IO addresses for PCI-DAS1602			
+	if(DEBUG) {
+		printf("\nDAS 1602 Base addresses:\n\n");
+		for(i=0;i<5;i++) {
+		badr[i]=PCI_IO_ADDR(info.CpuBaseAddress[i]);
+		if(DEBUG) printf("Badr[%d] : %x\n", i, badr[i]);
+	}
+	 
+	printf("\nReconfirm Iobase:\n");  	// map I/O base address to user space						
+		for(i=0;i<5;i++) {			// expect CpuBaseAddress to be the same as iobase for PC
+			iobase[i]=mmap_device_io(0x0f,badr[i]);	
+			printf("Index %d : Address : %x ", i,badr[i]);
+			printf("IOBASE  : %x \n",iobase[i]);
+		}													
+	}
+																			// Modify thread control privity
+	if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
+		perror("Thread Control");
+		exit(1);
+	}
 
 	system("clear");
 
@@ -378,8 +470,10 @@ int main () {
 
 	printf("\nEND\n%lf %lf %lf\n", proj_initial.angle, proj_initial.velocity, proj_initial.height);
 
-	sqrtEq_main = 1 +  ((2*G_ACC*(h -y))/((pow(sin(theta),2)*pow(v,2))));
+	sqrtEq_main = 1 +  ((2*G_ACC*(h))/((pow(sin(theta),2)*pow(v,2))));
 	d_main = (pow(v,2)/(2*G_ACC))  *  (1 +  sqrt(sqrtEq) )  *  sin(2*theta);
+
+	out8(DIO_CTLREG, 0x90);
 
 	while(true)
 	{
@@ -390,14 +484,39 @@ int main () {
 		
 		if(abs(guess-d_main) < 0.001)
 		{
-			printf("You got it right!!!Congratulations");
+			printf("You got it right!!!Congratulations\n");
 			break;
 		}
-		else if(tries 
+		else if(tries > 4)
 		{
+			printf("You have used up your 4 lives\n");
+			break;
+		}
+		else
+		{
+			lives--;
+			printf("No of tries so far: %d. You only have %d lives left\n", tries, (4-tries));
 			
 		}
+
+		switch((4-tries))
+		{
+			case 1: 
+				out8(DIO_PORTB, 0x08);
+				break;
+			case 2: 
+				out8(DIO_PORTB, 0x0c);
+				break;
+			case 3:
+				out8(DIO_PORTB, 0x0e);
+				break;
+			case 4:
+				out8(DIO_PORTB, 0x0f);
+				break;
+		}
 	}
+
+	printf("This is how the projectile will move!!\n");
 	compute_trajectory(proj_initial.velocity, proj_initial.height, proj_initial.angle); 
 
 	return 0;

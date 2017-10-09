@@ -188,7 +188,9 @@ int compute_trajectory(float v_input, float h_input, float theta_input) {
 
 	//auto scalling
 	deltaXY = XYscalling(yMax, dMax); 
-	
+
+	deltaX = deltaXY.deltaX;
+	deltaY = deltaXY.deltaY;
 
 	//plotting
 	y = yMax;
