@@ -100,6 +100,12 @@ int main () {
 	const struct projectile proj_const = { 45.0, 10.0, 100.0 };
 	struct projectile proj_initial = proj_const;
 
+	float sqrtEq_main;
+	float d_main;
+
+	float guess;
+	int tries;
+
 	system("clear");
 
 	printf("Hi! Welcome to a C Language Program to : \"Compute the Trajectory of A Projectile\".\n\n");
@@ -372,6 +378,26 @@ int main () {
 
 	printf("\nEND\n%lf %lf %lf\n", proj_initial.angle, proj_initial.velocity, proj_initial.height);
 
+	sqrtEq_main = 1 +  ((2*G_ACC*(h -y))/((pow(sin(theta),2)*pow(v,2))));
+	d_main = (pow(v,2)/(2*G_ACC))  *  (1 +  sqrt(sqrtEq) )  *  sin(2*theta);
+
+	while(true)
+	{
+		printf("You have 4 chances to estimate the landing point of the projectile\n");
+		printf("Chance No: %d: ", tries);
+
+		scanf("%f", &guess);
+		
+		if(abs(guess-d_main) < 0.001)
+		{
+			printf("You got it right!!!Congratulations");
+			break;
+		}
+		else if(tries 
+		{
+			
+		}
+	}
 	compute_trajectory(proj_initial.velocity, proj_initial.height, proj_initial.angle); 
 
 	return 0;

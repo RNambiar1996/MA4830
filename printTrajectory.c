@@ -160,6 +160,11 @@ int compute_trajectory(float v_input, float h_input, float theta_input) {
 	char str[20] = "hello there";
 
 	float dMax, yMax;
+	DuoValues deltaXY;
+	float deltaX;
+	float deltaY; 
+	int Yindent;
+	float y;	
 	//predefine num is 180
 	
 	v = v_input;
@@ -178,16 +183,15 @@ int compute_trajectory(float v_input, float h_input, float theta_input) {
 
 	//convert int to str of initial y indentation
 	sprintf(str, "%d", (int)yMax);
-	int Yindent = (unsigned)strlen(str);
+	Yindent = (unsigned)strlen(str);
 	// printf("Yindent> %d \n", Yindent);
 
 	//auto scalling
-	struct DuoValues deltaXY = XYscalling(yMax, dMax); 
-	float deltaX = deltaXY.deltaX;
-	float deltaY = deltaXY.deltaY; 
+	deltaXY = XYscalling(yMax, dMax); 
+	
 
 	//plotting
-	float y = yMax;
+	y = yMax;
 	y = PlotAboveH(y, yMax, deltaX, deltaY, Yindent);
 	y = PlotBelowH(y, deltaX, deltaY, Yindent);
 	PlotXaxis(Yindent, deltaX, dMax);
