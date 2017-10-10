@@ -1,6 +1,6 @@
 /*
   Author: Lee Ee Wei, Rahul Nambiar, Nicholas Adrian, Tan You Liang
-  Compile line: cc -o test main.c printTrajectory.c
+  Compile line(on QNX): cc -o test main.c printTrajectory.c -lm
 */
 
 #include <stdio.h>
@@ -15,10 +15,7 @@
 #include <sys/neutrino.h>
 #include <sys/mman.h>
 
-//#include <stdarg.h>
-//#include <ncurses.h>
-
-	
+// defining the maximum and minimum angles for initial launch angle
 #define MAX_ANGLE 90
 #define MIN_ANGLE -90
 
@@ -51,12 +48,11 @@
  	
 int badr[5];			// PCI 2.2 assigns 6 IO base addresses
 
-// TODO: Change to hex
 // Parameter selection using bit operations
 enum parameter_selection {
-  ANGLE = 1,
-  VELOCITY = 2,
-  HEIGHT = 4,
+  ANGLE    = 0x01,
+  VELOCITY = 0x02,
+  HEIGHT   = 0x04,
 };
 
 // Projectile parameter structure
@@ -67,17 +63,24 @@ struct projectile
   double height;
 };
 
-// TODO: only allow '-' to be the first character
 // Checks input string 
 bool check_str_for_non_digit (char input[])
 {
   int i;
   int check_return;
+  bool dot = false; // whether dot has been found, only allow 1 dot
   for ( i = 0; i < strlen (input); ++i )
   {
     check_return = isdigit(input[i]);
-    if ( !check_return && input[i] != '.' && input[i] != '-')
+    
+    if ( i == 0 && input[i] == '.')
       return false;
+    if ( !check_return && input[0] != '-' || ( input[i] == '.' && dot ) )
+    {
+      return false;
+    }
+    if ( input[i] == '.' && !dot ) // dot has been found
+      dot = true;
   }
   return true;
 }
@@ -115,6 +118,7 @@ bool check_input (char input[], double *save_value, uint8_t param)
 
 int main () {
 
+  // Initializations
 	struct pci_dev_info info;
 	void *hdl;
 
@@ -125,7 +129,6 @@ int main () {
 	unsigned int i,count;
 	unsigned short chan;
 
-	// Initializations
 	int number_of_parameters;
 	int str_length;
 	
@@ -133,9 +136,9 @@ int main () {
 	uint8_t parameter_selection = 0;
 
 	char input[100];
-	double input_buffer;
+	double input_buffer; // for holding the floating number after being converted from string input
 
-	const struct projectile proj_const = { 45.0, 10.0, 100.0 };
+	const struct projectile proj_const = { 45.0, 10.0, 100.0 }; // For default parameter values
 	struct projectile proj_initial = proj_const;
 
 	float sqrtEq_main;
@@ -190,25 +193,29 @@ int main () {
 		perror("Thread Control");
 		exit(1);
 	}
+	
 	out8(DIO_CTLREG, 0x90);
 	out8(DIO_PORTB, 0x00);
 	system("clear");
 
   // Initialization statements
-	printf("Hi! Welcome to a C Language Program to : \"Compute the Trajectory of A Projectile\".\n\n");
-	printf("In order to compute the trajectory of a projectile, this program needs 3 parameters. They are:-\n");
-	printf("\t- Initial launch angle\n");
-	printf("\t- Initial launch velocity\n");
-	printf("\t- Initial launch height\n\n");
+	printf("Hi! Welcome to the C Language Program for : \"Computing Trajectory of a Projectile\".\n\n");
+	printf("This program will calculate the horizontal range (d) travelled by the projectile. To do so, it requires up to 3 input variable(s) of:\n");
+	printf("    (1) initial launch angle [theta]\n");
+	printf("    (2) initial launch velocity [v]\n");
+	printf("    (3) initial launch height [h]\n\n");
 
-	printf("You can input either 1, 2, or 3 parameters. For options other than 3, the other parameter(s) will be kept constant.\n");
+	printf("If you decide to provide less than 3 input variables, the remaining variables will be fixed at the default values of:\n");
 
-	printf("\n\nThe default values for the parameters if not modified are as follows: \nV: 100m\nH: 100m\nTheta: 45 degrees\n\n");
+	printf("The default values for the parameters if not modified are as follows:\n");
+	printf("theta   = 45 degrees\n");
+	printf("v       = 100 m/s\n");
+	printf("h       = 100 m\n");
 	
 	// Prompting user to input number of parameters desired for input
 	while (true)
 	{ 
-		printf("How many parameters would you like to input?\n");
+		printf("Please enter the number of input variable(s) that you would like to enter [1/2/3]:\n");
 
 		scanf("%s", input);
 
@@ -223,12 +230,11 @@ int main () {
 
 	if (number_of_parameters == 1) // If only 1 input parameter desired
 	{
-		printf("\nWhich parameter would you like to input?\n");
-		printf("\t1. Initial launch angle\n");
-		printf("\t2. Initial launch velocity\n");
-		printf("\t3. Initial launch height\n");
-		printf("Please enter either 1, 2, or 3. Thank you.\n");
-
+		printf("\nPlease enter the input variable that you would like to provide:\n");
+		printf("\t[1] theta\n");
+		printf("\t[2] v\n");
+		printf("\t[3] h\n");
+		
 		while (true)
 		{
 			scanf("%s", input);
@@ -310,11 +316,10 @@ int main () {
   }
 	else if (number_of_parameters == 2)
 	{
-		printf("\nWhich parameters would you like to input?\n");
-		printf("\t1. Initial launch angle     and  initial launch velocity\n"); // 12 3
-		printf("\t2. Initial launch velocity  and  initial launch height\n");   // 24 6
-		printf("\t3. Initial launch angle     and  initial launch height\n");    // 14 5
-		printf("Please enter either 1, 2, or 3. Thank you.\n");
+		printf("\nPlease enter the input variables combination:\n");
+		printf("\t[1] theta  and  v\n"); // 12 3
+		printf("\t[2] v      and  h\n");   // 24 6
+		printf("\t[3] theta  and  h\n");    // 14 5
 
 		while (true)
 		{
@@ -427,7 +432,7 @@ int main () {
 		printf("\n");
 		while (true)
 		{
-			printf("Initial angle (in degrees): \n");
+			printf("theta (in degrees): \n");
 			scanf("%s", input);
 
 			success = false;
@@ -438,7 +443,7 @@ int main () {
 
 			while (true)
 			{
-				printf("Initial velocity (in meters per second): \n");
+				printf("v (in meters per second): \n");
 				scanf("%s", input);
 
 				success = false;
@@ -449,7 +454,7 @@ int main () {
 			  
 				while (true)
 				{
-					printf("Initial height (in meters): \n");
+					printf("h (in meters): \n");
 
 					scanf("%s", input);
 
