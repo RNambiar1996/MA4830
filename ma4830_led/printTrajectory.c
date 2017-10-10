@@ -6,7 +6,7 @@
 
 // change ScreenDisplayScale between 0 to 1 according to the resolution of the computer display 
 int Xscale, Yscale, col;
-float ScreenDisplayScale = 0.8;
+float ScreenDisplayScale = 0.5;
 
 
 //auto scalling of x y axis according to max display
@@ -16,10 +16,10 @@ DuoValues XYscalling(float yMax, float dMax){
 	vals.deltaY = yMax/Xscale;
 	vals.deltaX = dMax/Yscale;
 
-	if (vals.deltaY < 2*vals.deltaX)
-		vals.deltaY = 2*vals.deltaX;
+	if (vals.deltaY < 1*vals.deltaX)
+		vals.deltaY = 1*vals.deltaX;
 	else
-		vals.deltaX = vals.deltaY/2;
+		vals.deltaX = vals.deltaY/1;
 	return vals;
 }
 
@@ -127,7 +127,7 @@ int PlotXaxis(int Yindent, float deltaX, float dMax){
 	printf("(0,0)");
 	printSpaces(Yindent-2);
 
-	while(idx<col-20){
+	while(idx<col){ //-20){
 		//print unit of x scale on x-axis
 		if (idx%interval == 0){
 			sprintf(xDigit, "%d", (int)(idx*deltaX));
@@ -157,9 +157,9 @@ int compute_trajectory(float v_input, float h_input, float theta_input) {
 	float y;	
 
 	//display scalling according to global ScreenDisplayScale
-	Xscale = 50*ScreenDisplayScale; //50;
+	Xscale = 150*ScreenDisplayScale; //50;
 	Yscale = 150*ScreenDisplayScale; //150;
-	col = 170*ScreenDisplayScale; //180
+	col = 160*ScreenDisplayScale; //180
 	//printf("New Scale factor: %d %d %d\n", Xscale, Yscale, col);
 	
 	v = v_input;
