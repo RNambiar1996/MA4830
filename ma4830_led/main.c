@@ -307,9 +307,9 @@ int main () {
 	else if (number_of_parameters == 2) // If only 2 input parameter desired
 	{
 		printf("\nPlease enter the input variables combination:\n");
-		printf("\t[1] theta  and  v\n"); // 0x01 | 0x02 = 0x03
-		printf("\t[2] v      and  h\n"); // 0x02 | 0x04 = 0x06
-		printf("\t[3] theta  and  h\n"); // 0x01 | 0x04 = 0x05
+		printf("[1] theta  and  v\n"); // 0x01 | 0x02 = 0x03
+		printf("[2] v      and  h\n"); // 0x02 | 0x04 = 0x06
+		printf("[3] theta  and  h\n"); // 0x01 | 0x04 = 0x05
 
 		while (true)
 		{
