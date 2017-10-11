@@ -20,7 +20,7 @@
 
 // defining the maximum and minimum angles for initial launch angle
 #define MAX_ANGLE 90
-#define MIN_ANGLE -90
+#define MIN_ANGLE 0
 
 #define	DIO_PORTA		iobase[3] + 4				// Badr3 + 4
 #define	DIO_PORTB		iobase[3] + 5				// Badr3 + 5
