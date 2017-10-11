@@ -19,32 +19,12 @@
 #define MAX_ANGLE 90
 #define MIN_ANGLE -90
 
-#define	INTERRUPT		iobase[1] + 0		// Badr1 + 0 : also ADC register
-#define	MUXCHAN		iobase[1] + 2				// Badr1 + 2
-#define	TRIGGER		iobase[1] + 4				// Badr1 + 4
-#define	AUTOCAL		iobase[1] + 6				// Badr1 + 6
-#define 	DA_CTLREG		iobase[1] + 8				// Badr1 + 8
-
-#define 	AD_DATA		iobase[2] + 0				// Badr2 + 0
-#define 	AD_FIFOCLR		iobase[2] + 2				// Badr2 + 2
-
-#define	TIMER0			iobase[3] + 0				// Badr3 + 0
-#define	TIMER1			iobase[3] + 1				// Badr3 + 1
-#define	TIMER2			iobase[3] + 2				// Badr3 + 2
-#define	COUNTCTL		iobase[3] + 3				// Badr3 + 3
 #define	DIO_PORTA		iobase[3] + 4				// Badr3 + 4
 #define	DIO_PORTB		iobase[3] + 5				// Badr3 + 5
 #define	DIO_PORTC		iobase[3] + 6				// Badr3 + 6
 #define	DIO_CTLREG		iobase[3] + 7				// Badr3 + 7
-#define	PACER1			iobase[3] + 8				// Badr3 + 8
-#define	PACER2			iobase[3] + 9				// Badr3 + 9
-#define	PACER3			iobase[3] + a				// Badr3 + a
-#define	PACERCTL		iobase[3] + b				// Badr3 + b
 
-#define 	DA_Data		iobase[4] + 0				// Badr4 + 0
-#define 	DA_FIFOCLR		iobase[4] + 2				// Badr4 + 2
-
-#define	DEBUG						1
+#define	DEBUG			1
  	
 int badr[5];			// PCI 2.2 assigns 6 IO base addresses
 
@@ -123,9 +103,7 @@ int main () {
 	void *hdl;
 
 	uintptr_t iobase[6];
-	uintptr_t dio_in;
-	uint16_t adc_in;
-	
+
 	unsigned int i,count;
 	unsigned short chan;
 
@@ -157,12 +135,15 @@ int main () {
 	info.VendorId=0x1307;
 	info.DeviceId=0x01;
 
+	
+	//establishing pci bus connection
 	if ((hdl=pci_attach_device(0, PCI_SHARE|PCI_INIT_ALL, 0, &info))==0) {
 		perror("pci_attach_device");
 		exit(EXIT_FAILURE);
 	}
 	  
-	for(i=0;i<6;i++) {		// Another printf BUG ? - Break printf to two statements
+	//determining the different base addresses
+	for(i=0;i<6;i++) {		
 		if(info.BaseAddressSize[i]>0) {
 			printf("Aperture %d  Base 0x%x Length %d Type %s\n", i, 
 			PCI_IS_MEM(info.CpuBaseAddress[i]) ?  (int)PCI_MEM_ADDR(info.CpuBaseAddress[i]) : 
@@ -170,8 +151,6 @@ int main () {
 			PCI_IS_MEM(info.CpuBaseAddress[i]) ? "MEM" : "IO");
 		}
 	}  
-	    													
-	printf("IRQ %d\n",info.Irq);
 	
 	// Assign BADRn IO addresses for PCI-DAS1602			
 	if(DEBUG) {
@@ -188,17 +167,20 @@ int main () {
 			printf("IOBASE  : %x \n",iobase[i]);
 		}													
 	}
-																			// Modify thread control privity
+	
+	// Modify thread control privity
 	if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
 		perror("Thread Control");
 		exit(1);
 	}
-	
+
+	//establishin PORTB as output	
 	out8(DIO_CTLREG, 0x90);
+	//sending a signal to turn off all LED's connected on PORT B
 	out8(DIO_PORTB, 0x00);
 	system("clear");
 
-  // Initialization statements
+  	// Initialization statements
 	printf("Hi! Welcome to the C Language Program for : \"Computing Trajectory of a Projectile\".\n\n");
 	printf("This program will calculate the horizontal range (d) travelled by the projectile. To do so, it requires up to 3 input variable(s) of:\n");
 	printf("    (1) initial launch angle [theta]\n");
@@ -225,7 +207,7 @@ int main () {
 		  printf("\nPlease enter either 1, 2, or 3. Thank you.\n");
 	}
   
-  // Recording selection
+  	// Recording selection
 	number_of_parameters = input[0] - '0';
 
 	if (number_of_parameters == 1) // If only 1 input parameter desired
@@ -475,71 +457,103 @@ int main () {
 	sqrtEq_main = 1 +  ((2*G_ACC*(proj_initial.height))/((pow(sin(proj_initial.angle*PI/180),2)*pow(proj_initial.velocity,2))));
 	d_main = (pow(proj_initial.velocity,2)/(2*G_ACC))  *  (1 +  sqrt(sqrtEq_main) )  *  sin(2*(proj_initial.angle*PI/180));
 
-  tries=1;
-  
-  printf("\n\n\nYou have 4 chances to estimate the landing point of the projectile\n");
-  out8(DIO_PORTB, 0xff);
-    
+  	
+	printf("Do you want to play a game to guess the horizontal distance reached by the projectile?\n");
+	
+	//while loop to check for valid input from user
 	while(true)
 	{
-		printf("\nChance No: %d: \n\n", tries);
-		
+		printf("\nPlease enter y or n\n");
 		scanf("%s", input);
-
-		success = false;
-		success = check_str_for_non_digit(input);
-
-		if (!success)
-		{
-		printf("\n\nSorry, that is not a valid number. Please enter a valid number.\n\n");
-		continue;
-		}
-
-		guess = strtod(input, NULL);
-		
-		if(abs(guess-d_main) < 0.01)
-		{
-			out8(DIO_PORTB, 0xff);
-			printf("\n\n\nYou got it right. Congratulations\n\n\n");
-			break;
-		}
-		else
-		{
-			tries++;
-			printf("\n\nNo of tries so far: %d. You only have %d lives left\n\n", tries, (5-tries));
-		}
-		
-		switch((5-tries))
-		{
-			case 0:
-				out8(DIO_PORTB, 0x00);
-				break;
-			case 1: 
-				out8(DIO_PORTB, 0x08);
-				break;
-			case 2: 
-				out8(DIO_PORTB, 0x0c);
-				break;
-			case 3:
-				out8(DIO_PORTB, 0x0e);
-				break;
-			case 4:
-				out8(DIO_PORTB, 0x0f);
-				break;
-		}
-		
-		if(tries == 5)
-		{
-			system("clear");
-			printf("You have used up your 4 lives\n\n\n\n\n\n");
-			break;
-		}
-		
-	}
 	
-	pci_detach_device(hdl);
+		if (input[0] == 'y' || input[0] == 'n')
+			break;
+		else
+			printf("Invalid entry. Try again\n");
+	}
 
+	if (input[0] == 'y')
+	{
+		//initialising variable to be used to keep track of number of attempted tries by user
+		tries=1;
+	  	printf("\n\n\nYou have 4 chances to estimate the landing point of the projectile\n");
+	  	out8(DIO_PORTB, 0xff);
+		
+		while(true)
+		{
+			printf("\nChance No: %d: \n\n", tries);
+		
+			scanf("%s", input);
+
+			success = false;
+			success = check_str_for_non_digit(input);
+
+			//checking if entered number is valid
+			if (!success)
+			{
+			printf("\n\nSorry, that is not a valid number. Please enter a valid number.\n\n");
+			continue;
+			}
+
+			//converting string to number
+			guess = strtod(input, NULL);
+		
+			//checking if guess is close to the actual distance travelled by the projectile
+			if(abs(guess-d_main) < 0.01)
+			{
+				//turning on all LED's on PORTB to indicate success
+				out8(DIO_PORTB, 0xff);
+				printf("\n\n\nYou got it right. Congratulations\n\n\n");
+				break;
+			}
+			//if user enters incorrect number, incrementing tries variable to reflect incorrect attempt
+			else
+			{
+				tries++;
+				printf("\n\nNo of tries so far: %d. You only have %d lives left\n\n", tries, (5-tries));
+			}
+
+			
+			//switch statement to turn off one LED for each incorrect try		
+			switch((5-tries))
+			{
+				case 0:
+					out8(DIO_PORTB, 0x00);
+					break;
+				case 1: 
+					out8(DIO_PORTB, 0x08);
+					break;
+				case 2: 
+					out8(DIO_PORTB, 0x0c);
+					break;
+				case 3:
+					out8(DIO_PORTB, 0x0e);
+					break;
+				case 4:
+					out8(DIO_PORTB, 0x0f);
+					break;
+			}
+		
+
+			//if user exhausts his 4 chances
+			if(tries == 5)
+			{
+				system("clear");
+				printf("You have used up your 4 lives\n\n\n\n\n\n");
+				break;
+			}
+		}	
+	}
+
+	//turning off all led's
+	out8(DIO_PORTB, 0x00);
+	
+	//disconnecting from the pci bus
+	pci_detach_device(hdl);
+	
 	printf("This is how the projectile will move\n\n\n");
+	
+	//function to display the projectile motion of the object
 	compute_trajectory(proj_initial.velocity, proj_initial.height, proj_initial.angle); 
 
 	return 0;
