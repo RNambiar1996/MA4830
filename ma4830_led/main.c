@@ -180,7 +180,7 @@ int main () {
 	out8(DIO_PORTB, 0x00);
 	system("clear");
 
-  	// Initialization statements
+	// Initialization statements
 	printf("Hi! Welcome to the C Language Program for : \"Computing Trajectory of a Projectile\".\n\n");
 	printf("This program will calculate the horizontal range (d) travelled by the projectile. To do so, it requires up to 3 input variable(s) of:\n");
 	printf("    (1) initial launch angle [theta]\n");
@@ -207,7 +207,7 @@ int main () {
 		  printf("\nPlease enter either 1, 2, or 3. Thank you.\n");
 	}
   
-  	// Recording selection
+	// Recording selection
 	number_of_parameters = input[0] - '0';
 
 	if (number_of_parameters == 1) // If only 1 input parameter desired
@@ -217,17 +217,22 @@ int main () {
 		printf("\t[2] v\n");
 		printf("\t[3] h\n");
 		
+		// checks validity of selection
 		while (true)
 		{
 			scanf("%s", input);
 
+      // make sure selection is eiter 1, 2, or 3. 49 = '1', 50 = '2', 51 = '3'.
 			if ( (str_length = strlen (input)) == 1 && input[0] >= 49 && input[0] <= 51 )
 			  break;
 			else
 			  printf("\nPlease enter either 1, 2, or 3. Thank you.\n");
 		}
     
+    // clearing parameter selection variable
     parameter_selection = 0;
+    
+    // recording parameter selection
     if (input[0] == '1')
     {
     	parameter_selection = parameter_selection | ANGLE;
@@ -255,6 +260,7 @@ int main () {
 
 		  scanf("%s", input);
 
+      // checks validity of selection, and records them if valid
 		  success = false;
 		  success = check_str_for_non_digit(input);
 
@@ -296,27 +302,27 @@ int main () {
 		  break;
     }
   }
-	else if (number_of_parameters == 2)
+	else if (number_of_parameters == 2) // If only 2 input parameter desired
 	{
 		printf("\nPlease enter the input variables combination:\n");
-		printf("\t[1] theta  and  v\n"); // 12 3
-		printf("\t[2] v      and  h\n");   // 24 6
-		printf("\t[3] theta  and  h\n");    // 14 5
+		printf("\t[1] theta  and  v\n"); // 0x01 | 0x02 = 0x03
+		printf("\t[2] v      and  h\n"); // 0x02 | 0x04 = 0x06
+		printf("\t[3] theta  and  h\n"); // 0x01 | 0x04 = 0x05
 
 		while (true)
 		{
 			scanf("%s", input);
 
+      // make sure selection is eiter 1, 2, or 3. 49 = '1', 50 = '2', 51 = '3'.
 			if ( (str_length = strlen (input)) == 1 && input[0] >= 49 && input[0] <= 51 )
-			{
 				break;
-			}
 			else
 				printf("Please enter either 1, 2, or 3. Thank you.\n");
 		}
 
 		parameter_selection = 0; // clearing parameter selection
 		
+    // recording parameter selection
 		if (input[0] == '1')
 			parameter_selection = parameter_selection | ANGLE    | VELOCITY;
 		else if (input[0] == '2')
@@ -325,7 +331,6 @@ int main () {
 			parameter_selection = parameter_selection | ANGLE    | HEIGHT;
 
 		printf("\nPlease enter the values for your desired parameters.\n");
-		//printf("%d %d\n", parameter_selection, ANGLE    | VELOCITY);
 
 		while (true)
 		{
@@ -334,6 +339,7 @@ int main () {
 				printf("Initial angle (in degrees): \n");
 				scanf("%s", input);
 
+        // checks validity of selection, and records them if valid
 				success = false;
 				success = check_input(input, &proj_initial.angle, ANGLE);
 
@@ -409,7 +415,7 @@ int main () {
 			break;
 		}
 	}
-	else if (number_of_parameters == 3)
+	else if (number_of_parameters == 3) // If only 3 input parameter desired
 	{
 		printf("\n");
 		while (true)
@@ -417,6 +423,7 @@ int main () {
 			printf("theta (in degrees): \n");
 			scanf("%s", input);
 
+      // checks validity of selection, and records them if valid
 			success = false;
 			success = check_input(input, &proj_initial.angle, ANGLE);
 
@@ -444,9 +451,9 @@ int main () {
 					success = check_input(input, &proj_initial.height, HEIGHT);
 
 					if (!success)
-					continue;
+					  continue;
 					else
-					break;
+					  break;
 				}
 				break;
 			}
@@ -456,7 +463,6 @@ int main () {
 
 	sqrtEq_main = 1 +  ((2*G_ACC*(proj_initial.height))/((pow(sin(proj_initial.angle*PI/180),2)*pow(proj_initial.velocity,2))));
 	d_main = (pow(proj_initial.velocity,2)/(2*G_ACC))  *  (1 +  sqrt(sqrtEq_main) )  *  sin(2*(proj_initial.angle*PI/180));
-
   	
 	printf("Do you want to play a game to guess the horizontal distance reached by the projectile?\n");
 	
@@ -476,8 +482,8 @@ int main () {
 	{
 		//initialising variable to be used to keep track of number of attempted tries by user
 		tries=1;
-	  	printf("\n\n\nYou have 4 chances to estimate the landing point of the projectile\n");
-	  	out8(DIO_PORTB, 0xff);
+  	printf("\n\n\nYou have 4 chances to estimate the landing point of the projectile\n");
+  	out8(DIO_PORTB, 0xff);
 		
 		while(true)
 		{
@@ -491,8 +497,8 @@ int main () {
 			//checking if entered number is valid
 			if (!success)
 			{
-			printf("\n\nSorry, that is not a valid number. Please enter a valid number.\n\n");
-			continue;
+			  printf("\n\nSorry, that is not a valid number. Please enter a valid number.\n\n");
+			  continue;
 			}
 
 			//converting string to number
