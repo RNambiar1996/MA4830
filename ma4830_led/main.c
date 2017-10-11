@@ -183,21 +183,20 @@ int main () {
 	// Initialization statements
 	printf("Hi! Welcome to the C Language Program for : \"Computing Trajectory of a Projectile\".\n\n");
 	printf("This program will calculate the horizontal range (d) travelled by the projectile. To do so, it requires up to 3 input variable(s) of:\n");
-	printf("    (1) initial launch angle [theta]\n");
-	printf("    (2) initial launch velocity [v]\n");
-	printf("    (3) initial launch height [h]\n\n");
+	printf("(1) initial launch angle [theta]\n");
+	printf("(2) initial launch velocity [v]\n");
+	printf("(3) initial launch height [h]\n\n");
 
 	printf("If you decide to provide less than 3 input variables, the remaining variables will be fixed at the default values of:\n");
 
-	printf("The default values for the parameters if not modified are as follows:\n");
 	printf("theta   = 45 degrees\n");
 	printf("v       = 100 m/s\n");
-	printf("h       = 100 m\n");
+	printf("h       = 100 m\n\n");
 	
 	// Prompting user to input number of parameters desired for input
 	while (true)
 	{ 
-		printf("Please enter the number of input variable(s) that you would like to enter [1/2/3]:\n");
+		printf("\nPlease enter the number of input variable(s) that you would like to enter [1/2/3]:\n");
 
 		scanf("%s", input);
 
@@ -213,9 +212,9 @@ int main () {
 	if (number_of_parameters == 1) // If only 1 input parameter desired
 	{
 		printf("\nPlease enter the input variable that you would like to provide:\n");
-		printf("\t[1] theta\n");
-		printf("\t[2] v\n");
-		printf("\t[3] h\n");
+		printf("[1] theta\n");
+		printf("[2] v\n");
+		printf("[3] h\n");
 		
 		// checks validity of selection
 		while (true)
@@ -432,7 +431,7 @@ int main () {
 
 			while (true)
 			{
-				printf("v (in meters per second): \n");
+				printf("\nv (in meters per second): \n");
 				scanf("%s", input);
 
 				success = false;
@@ -443,7 +442,7 @@ int main () {
 			  
 				while (true)
 				{
-					printf("h (in meters): \n");
+					printf("\nh (in meters): \n");
 
 					scanf("%s", input);
 
@@ -556,8 +555,6 @@ int main () {
 	
 	//disconnecting from the pci bus
 	pci_detach_device(hdl);
-	
-	printf("This is how the projectile will move\n\n\n");
 	
 	//function to display the projectile motion of the object
 	compute_trajectory(proj_initial.velocity, proj_initial.height, proj_initial.angle); 
