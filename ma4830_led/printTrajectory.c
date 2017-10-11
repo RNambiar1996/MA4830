@@ -191,7 +191,7 @@ int compute_trajectory(float v_input, float h_input, float theta_input) {
 	PlotXaxis(Yindent, deltaX, dMax);
 
         printf("\n\n\nMaximum height of the projectile rises : %f\n\n\n\n", yMax);
-	printf("\n\n\nMaximum horizontal range (d) of the projectile : %f\n\n", dMax);
+	printf("Maximum horizontal range (d) of the projectile : %f\n\n", dMax);
 
 	return 0;
 }

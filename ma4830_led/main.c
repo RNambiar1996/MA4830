@@ -463,7 +463,7 @@ int main () {
 	sqrtEq_main = 1 +  ((2*G_ACC*(proj_initial.height))/((pow(sin(proj_initial.angle*PI/180),2)*pow(proj_initial.velocity,2))));
 	d_main = (pow(proj_initial.velocity,2)/(2*G_ACC))  *  (1 +  sqrt(sqrtEq_main) )  *  sin(2*(proj_initial.angle*PI/180));
   	
-	printf("Do you want to play a game to guess the horizontal distance reached by the projectile?\n");
+	printf("\nDo you want to play a game to guess the horizontal distance reached by the projectile?\n");
 	
 	//while loop to check for valid input from user
 	while(true)
