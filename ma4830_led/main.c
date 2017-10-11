@@ -1,6 +1,9 @@
 /*
   Author: Lee Ee Wei, Rahul Nambiar, Nicholas Adrian, Tan You Liang
-  Compile line(on QNX): cc -o test main.c printTrajectory.c -lm
+  11 October 2017
+  Code maintainer email: rahul010@e.ntu.edu.sg
+  Compile line(on QNX): cc -o ca1 main.c printTrajectory.c -lm
+  Execute: ./ca1
 */
 
 #include <stdio.h>
@@ -463,7 +466,7 @@ int main () {
 	sqrtEq_main = 1 +  ((2*G_ACC*(proj_initial.height))/((pow(sin(proj_initial.angle*PI/180),2)*pow(proj_initial.velocity,2))));
 	d_main = (pow(proj_initial.velocity,2)/(2*G_ACC))  *  (1 +  sqrt(sqrtEq_main) )  *  sin(2*(proj_initial.angle*PI/180));
   	
-	printf("\nDo you want to play a game to guess the horizontal distance reached by the projectile?\n");
+	printf("\nDo you want to play a game to guess the horizontal range (d) reached by the projectile?\n");
 	
 	//while loop to check for valid input from user
 	while(true)
@@ -481,12 +484,12 @@ int main () {
 	{
 		//initialising variable to be used to keep track of number of attempted tries by user
 		tries=1;
-  	printf("\n\n\nYou have 4 chances to estimate the landing point of the projectile\n");
+  	printf("\n\n\nYou have 4 chances to estimate the horizontal range (d) of the projectile\n");
   	out8(DIO_PORTB, 0xff);
 		
 		while(true)
 		{
-			printf("\nChance No: %d: \n\n", tries);
+			printf("\nChance no %d: \n\n", tries);
 		
 			scanf("%s", input);
 
@@ -508,14 +511,14 @@ int main () {
 			{
 				//turning on all LED's on PORTB to indicate success
 				out8(DIO_PORTB, 0xff);
-				printf("\n\n\nYou got it right. Congratulations\n\n\n");
+				printf("\n\n\nYou got it right. Congratulations!\n\n\n");
 				break;
 			}
 			//if user enters incorrect number, incrementing tries variable to reflect incorrect attempt
 			else
 			{
 				tries++;
-				printf("\n\nNo of tries so far: %d. You only have %d lives left\n\n", tries, (5-tries));
+				printf("\n\nWrong guess! No of tries so far: %d. You only have %d lives left\n", tries, (5-tries));
 			}
 
 			
@@ -543,8 +546,7 @@ int main () {
 			//if user exhausts his 4 chances
 			if(tries == 5)
 			{
-				system("clear");
-				printf("You have used up your 4 lives\n\n\n\n\n\n");
+				printf("You have used up your 4 lives! Game over!\n\n\n");
 				break;
 			}
 		}	
