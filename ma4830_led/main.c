@@ -1,9 +1,21 @@
 /*
   Author: Lee Ee Wei, Rahul Nambiar, Nicholas Adrian, Tan You Liang
-  11 October 2017
+  12 October 2017
   Code maintainer email: rahul010@e.ntu.edu.sg
   Compile line(on QNX): cc -o ca1 main.c printTrajectory.c -lm
   Execute: ./ca1
+  
+  Explanation for how we used the scanf functions:-
+  
+  How it is used:
+    scanf("%[^\n]s", input); // input is the character array for string input
+    flush_input();           // flush_input() is a function we made to flush the input
+    
+  The "[^\n]" in scanf is to change the delimiter, this is so that we can prevent such cases:
+  e.g. When "a a a" is entered, the error message would be printed 3 times, because scanf accepts ' ', or space as a delimiter
+  e.g. When "1 a a" is entered, "1" will be accepted, but 2 error messages would still be printed
+  
+  flush_input() function is to prevent scanf from accepting the '\n' from the previous input, if it does, error messages will be printed non-stop
 */
 
 #include <stdio.h>
@@ -29,7 +41,8 @@
 
 #define DEBUG  1
 
-int badr[5];      // PCI 2.2 assigns 6 IO base addresses
+int badr[5];    // PCI 2.2 assigns 6 IO base addresses
+char flush_ch;  // this is declared as a global variable, to prevent the overhead of initialization in flush_input() function every time, it should be fine here because this is a short program, would be a bad practice if this is a complex program
 
 // Parameter selection using bit operations
 enum parameter_selection {
@@ -56,9 +69,12 @@ bool check_str_for_non_digit (char input[])
   {
     check_return = isdigit(input[i]);
     
-    if ( i == 0 && input[i] == '.')
+    if (input[i] == ' ')
       return false;
-    if ( !check_return && input[0] != '-' || ( input[i] == '.' && dot ) )
+    
+    if ( !check_return && input[0] != '-' // check_return checks whether it is a valid number, if it is not, check whether it is a negative character, if negative character, ignore check_return
+        || ( input[i] == '.' && dot )     // true if a second dot is found
+        || input[0] == '.' )              // does not allow first character to be a dot
     {
       return false;
     }
@@ -99,6 +115,11 @@ bool check_input (char input[], double *save_value, uint8_t param)
   return true;
 }
 
+void flush_input()
+{
+  while ( (flush_ch = getchar()) != '\n' && flush_ch != EOF );
+}
+
 int main () {
 
   // Initializations
@@ -134,7 +155,7 @@ int main () {
     exit(EXIT_FAILURE);
   }
   
-  /*Vendor and Device ID */
+  // Vendor and Device ID
   info.VendorId=0x1307;
   info.DeviceId=0x01;
 
@@ -187,6 +208,8 @@ int main () {
   out8(DIO_CTLREG, 0x90);
   //sending a signal to turn off all LED's connected on PORT B
   out8(DIO_PORTB, 0x00);
+  
+  // Clearing terminal screen
   system("clear");
 
   // Initialization statements
@@ -205,10 +228,12 @@ int main () {
   // Prompting user to input number of parameters desired for input
   while (true)
   { 
-    printf("\nPlease enter the number of input variable(s) that you would like to enter [1/2/3]:\n");
+    printf("Please enter the number of input variable(s) that you would like to enter [1/2/3]:\n");
 
-    scanf("%s", input);
+    scanf("%[^\n]s", input);
+    flush_input();
 
+    // checking validity of input
     if ( (str_length = strlen (input)) == 1 && input[0] >= 49 && input[0] <= 51 )
       break;
     else
@@ -224,11 +249,14 @@ int main () {
     printf("[1] theta\n");
     printf("[2] v\n");
     printf("[3] h\n");
+    printf("Please specify the variable that you would like to enter [1/2/3]:\n");
 
     // checks validity of selection
     while (true)
     {
-      scanf("%s", input);
+      //flush_input();
+      scanf("%[^\n]s", input);
+      flush_input();
 
       // make sure selection is eiter 1, 2, or 3. 49 = '1', 50 = '2', 51 = '3'.
       if ( (str_length = strlen (input)) == 1 && input[0] >= 49 && input[0] <= 51 )
@@ -266,7 +294,8 @@ int main () {
       else if (parameter_selection == HEIGHT)
         printf("height (in meters): \n");
 
-      scanf("%s", input);
+      scanf("%[^\n]s", input);
+      flush_input();
 
       // checks validity of selection, and records them if valid
       success = false;
@@ -316,10 +345,12 @@ int main () {
     printf("[1] theta  and  v\n"); // 0x01 | 0x02 = 0x03
     printf("[2] v      and  h\n"); // 0x02 | 0x04 = 0x06
     printf("[3] theta  and  h\n"); // 0x01 | 0x04 = 0x05
+    printf("Please specify the variables that you would like to enter [1/2/3]:\n");
 
     while (true)
     {
-      scanf("%s", input);
+      scanf("%[^\n]s", input);
+      flush_input();
 
       // make sure selection is eiter 1, 2, or 3. 49 = '1', 50 = '2', 51 = '3'.
       if ( (str_length = strlen (input)) == 1 && input[0] >= 49 && input[0] <= 51 )
@@ -345,7 +376,9 @@ int main () {
       if (parameter_selection == (ANGLE|VELOCITY) )
       {
         printf("Initial angle (in degrees): \n");
-        scanf("%s", input);
+        
+        scanf("%[^\n]s", input);
+        flush_input();
 
         // checks validity of selection, and records them if valid
         success = false;
@@ -357,7 +390,9 @@ int main () {
         while (true)
         {
           printf("Initial velocity (in meters per second): \n");
-          scanf("%s", input);
+          
+          scanf("%[^\n]s", input);
+          flush_input();
 
           success = false;
           success = check_input(input, &proj_initial.velocity, VELOCITY);
@@ -371,7 +406,9 @@ int main () {
       else if (parameter_selection == (VELOCITY|HEIGHT) )
       {
         printf("Initial velocity (in meters per second): \n");
-        scanf("%s", input);
+        
+        scanf("%[^\n]s", input);
+        flush_input();
 
         success = false;
         success = check_input(input, &proj_initial.velocity, VELOCITY);
@@ -383,7 +420,8 @@ int main () {
         {
           printf("Initial height (in meters): \n");
 
-          scanf("%s", input);
+          scanf("%[^\n]s", input);
+          flush_input();
 
           success = false;
           success = check_input(input, &proj_initial.height, HEIGHT);
@@ -397,7 +435,9 @@ int main () {
       else if (parameter_selection == (ANGLE|HEIGHT) )
       {
         printf("Initial angle (in degrees): \n");
-        scanf("%s", input);
+        
+        scanf("%[^\n]s", input);
+        flush_input();
 
         success = false;
         success = check_input(input, &proj_initial.angle, ANGLE);
@@ -409,7 +449,8 @@ int main () {
         {
           printf("Initial height (in meters): \n");
 
-          scanf("%s", input);
+          scanf("%[^\n]s", input);
+          flush_input();
 
           success = false;
           success = check_input(input, &proj_initial.height, HEIGHT);
@@ -429,7 +470,9 @@ int main () {
     while (true)
     {
       printf("theta (in degrees): \n");
-      scanf("%s", input);
+      
+      scanf("%[^\n]s", input);
+      flush_input();
 
       // checks validity of selection, and records them if valid
       success = false;
@@ -441,7 +484,9 @@ int main () {
       while (true)
       {
         printf("\nv (in meters per second): \n");
-        scanf("%s", input);
+        
+        scanf("%[^\n]s", input);
+        flush_input();
 
         success = false;
         success = check_input(input, &proj_initial.velocity, VELOCITY);
@@ -453,7 +498,8 @@ int main () {
         {
           printf("\nh (in meters): \n");
 
-          scanf("%s", input);
+          scanf("%[^\n]s", input);
+          flush_input();
 
           success = false;
           success = check_input(input, &proj_initial.height, HEIGHT);
@@ -478,7 +524,9 @@ int main () {
   while(true)
   {
     printf("\nPlease enter y or n\n");
-    scanf("%s", input);
+    
+    scanf("%[^\n]s", input);
+    flush_input();
 
     if (input[0] == 'y' || input[0] == 'n')
       break;
@@ -497,7 +545,8 @@ int main () {
     {
       printf("\nChance no %d: \n\n", tries);
 
-      scanf("%s", input);
+      scanf("%[^\n]s", input);
+      flush_input();
 
       success = false;
       success = check_str_for_non_digit(input);
