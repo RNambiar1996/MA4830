@@ -1,6 +1,7 @@
 /*
   Author: Lee Ee Wei, Rahul Nambiar, Nicholas Adrian, Tan You Liang
   12 October 2017
+  Program name: C Language Program for "Computing Trajectory of a Projectile"
   Code maintainer email: rahul010@e.ntu.edu.sg
   Compile line(on QNX): cc -o ca1 main.c printTrajectory.c -lm
   Execute: ./ca1
@@ -23,8 +24,9 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "printTrajectory.h"
+#include <float.h>
 #include <unistd.h>
+#include "printTrajectory.h"
 #include <hw/pci.h>
 #include <hw/inout.h>
 #include <sys/neutrino.h>
@@ -42,7 +44,6 @@
 #define DEBUG  1
 
 int badr[5];    // PCI 2.2 assigns 6 IO base addresses
-char flush_ch;  // this is declared as a global variable, to prevent the overhead of initialization in flush_input() function every time, it should be fine here because this is a short program, would be a bad practice if this is a complex program
 
 // Parameter selection using bit operations
 enum parameter_selection {
@@ -54,9 +55,9 @@ enum parameter_selection {
 // Projectile parameter structure
 struct projectile
 {
-  double angle;
-  double velocity;
-  double height;
+  float angle;
+  float velocity;
+  float height;
 };
 
 // Checks input string 
@@ -85,10 +86,10 @@ bool check_str_for_non_digit (char input[])
 }
 
 // Checks input validity according to parameter selection, and saves it to "save_value"
-bool check_input (char input[], double *save_value, uint8_t param)
+bool check_input (char input[], float *save_value, uint8_t param)
 {
   bool digit_check = false;
-  double digit_buffer;
+  float digit_buffer;
   
   digit_check = check_str_for_non_digit(input);
   
@@ -100,7 +101,7 @@ bool check_input (char input[], double *save_value, uint8_t param)
   
   digit_buffer = strtod(input, NULL);
   
-  if ( param == ANGLE && ( digit_buffer < MIN_ANGLE ||  digit_buffer > MAX_ANGLE ) )
+  if ( param == ANGLE && ( digit_buffer < MIN_ANGLE ||  digit_buffer > MAX_ANGLE ) ) // so that angle is within limit
   {
     printf("Please enter a value between %d and %d for angle.\n", MIN_ANGLE, MAX_ANGLE);
     return false;
@@ -110,6 +111,26 @@ bool check_input (char input[], double *save_value, uint8_t param)
     printf("Please enter a value larger than 0.\n");
     return false;
   }
+  else if ( param != ANGLE && digit_buffer >= FLT_MAX ) // for float data type upper limit
+  {
+    printf("Please enter a smaller value.\n");
+    return false;
+  }
+  else if ( digit_buffer <= FLT_MIN ) // for float data type lower limit
+  {
+    printf("Please enter a larger value.\n");
+    return false;
+  }
+  else if ( param == VELOCITY && pow(digit_buffer, 2) >= FLT_MAX ) // for velocity, float data type upper limit, because velocity will need to be squared
+  {
+    printf("Please enter a smaller value.\n");
+    return false;
+  }
+  else if ( param == VELOCITY && pow(digit_buffer, 2) <= FLT_MIN ) // for velocity, float data type lower limit, because velocity will need to be squared
+  {
+    printf("Please enter a larger value.\n");
+    return false;
+  }
   
   *save_value = digit_buffer;
   return true;
@@ -117,6 +138,7 @@ bool check_input (char input[], double *save_value, uint8_t param)
 
 void flush_input()
 {
+  char flush_ch;
   while ( (flush_ch = getchar()) != '\n' && flush_ch != EOF );
 }
 
@@ -138,7 +160,7 @@ int main () {
   uint8_t parameter_selection = 0;
 
   char input[100];
-  double input_buffer; // for holding the floating number after being converted from string input
+  float input_buffer; // for holding the floating number after being converted from string input
 
   const struct projectile proj_const = { 45.0, 100.0, 100.0 }; // For default parameter values
   struct projectile proj_initial = proj_const;
@@ -211,7 +233,7 @@ int main () {
   
   // Clearing terminal screen
   system("clear");
-
+  
   // Initialization statements
   printf("Hi! Welcome to the C Language Program for : \"Computing Trajectory of a Projectile\".\n\n");
   printf("This program will calculate the horizontal range (d) travelled by the projectile. To do so, it requires up to 3 input variable(s) of:\n");
@@ -299,43 +321,17 @@ int main () {
 
       // checks validity of selection, and records them if valid
       success = false;
-      success = check_str_for_non_digit(input);
-
-      if (!success)
-      {
-        printf("Sorry, that is not a valid number. Please enter a valid number.\n");
-        continue;
-      }
-
-      input_buffer = strtod(input, NULL);
 
       if (parameter_selection == ANGLE)
-      {
-        if ( input_buffer < MIN_ANGLE ||  input_buffer > MAX_ANGLE )
-        {
-          printf("Please enter a value between %d and %d for angle.\n", MIN_ANGLE, MAX_ANGLE);
-          continue;
-        }
-        proj_initial.angle = input_buffer;
-      }
+        success = check_input(input, &proj_initial.angle, ANGLE);
       else if (parameter_selection == VELOCITY)
-      {
-        if ( input_buffer < 0 )
-        {
-          printf("Please enter a value larger than 0.\n");
-          continue;
-        }
-        proj_initial.velocity = input_buffer;
-      }
+        success = check_input(input, &proj_initial.velocity, VELOCITY);
       else if (parameter_selection == HEIGHT)
-      {
-        if ( input_buffer < 0 )
-        {
-          printf("Please enter a value larger than 0.\n");
-          continue;
-        }
-        proj_initial.height = input_buffer;
-      }
+        success = check_input(input, &proj_initial.height, HEIGHT);
+
+      if (!success)
+        continue;
+        
       break;
     }
   }
@@ -513,11 +509,11 @@ int main () {
       }
       break;
     }
-  }
+  } // end of if(number_of_parameters == 3) condition
 
-  sqrtEq_main = 1 + ( ( 2*G_ACC * ( proj_initial.height ) ) / ( ( pow( sin( proj_initial.angle * PI/180 ), 2 ) * pow( proj_initial.velocity, 2 ) ) ) );
+  sqrtEq_main = 1 + ( ( 2 * G_ACC * ( proj_initial.height ) ) / ( ( pow( sin( proj_initial.angle * PI/180 ), 2 ) * pow( proj_initial.velocity, 2 ) ) ) );
   d_main = ( pow( proj_initial.velocity, 2) / ( 2 * G_ACC ) ) * ( 1 +  sqrt( sqrtEq_main ) ) * sin( 2 * ( proj_initial.angle * PI/180 ) );
-
+  /*
   printf("\nDo you want to play a game to guess the horizontal range (d) reached by the projectile?\n");
 
   //while loop to check for valid input from user
@@ -610,7 +606,7 @@ int main () {
 
   //disconnecting from the pci bus
   pci_detach_device(hdl);
-
+*/
   //function to display the projectile motion of the object
   compute_trajectory(proj_initial.velocity, proj_initial.height, proj_initial.angle); 
 
