@@ -23,11 +23,11 @@
 #define DA_Data			iobase[4] + 0				// Badr4 + 0
 #define DA_FIFOCLR		iobase[4] + 2				// Badr4 + 2
 
-#define	DEBUG						1
+#define	DEBUG						0
 
 uintptr_t iobase[6];
 
 //input.c
-uint16_t channel;
 uintptr_t dio_result;
-uint16_t aio_result;
+uint16_t ai0_result;
+uint16_t ai1_result;

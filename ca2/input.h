@@ -14,3 +14,4 @@ uintptr_t dio_read(uintptr_t dio_port);
 uint16_t aio_read(uint16_t channel);
 
 int read_input();
+
