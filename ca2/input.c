@@ -1,7 +1,9 @@
 /*
-[ ] accept digital input for two types of waves
-[ ] change frequency/amplitude value to the right ratio
-[ ] update LED
+[X] read digital input switch 2: sine vs square waveform
+[X] read analog input switch 1: amplitude/frequency value
+[X] read analog input switch 2: offset value
+[X] rescaled analog uint16 bit to uint8 bit
+[X] update LED
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +15,6 @@
 //#include "define.h"
 #include "input.h"
 
-char* aio_source;
 uint16_t channel0 = 0x00;
 uint16_t channel1 = 0x01;
 
@@ -41,34 +42,42 @@ uint16_t aio_read(uint16_t channel){
 }
 
 void led(uint16_t offset){
-	if(offset<0x0060){out8(DIO_PORTB,0x00);}
-	else if(0x0060<=offset & offset<0x0f00){out8(DIO_PORTB,0x01);}
-        else if(0x0f00<=offset & offset<0x3000) {out8(DIO_PORTB,0x03);}
-	else if(0x3000<=offset & offset<0xf700) {out8(DIO_PORTB,0x07);}
-	else {out8(DIO_PORTB,0x0f);}
+	if(offset<0x0190){out8(DIO_PORTB,0x00);}				// <400
+	else if(0x0190<=offset & offset<0x3fff){out8(DIO_PORTB,0x01);}		// 400<X<16383
+        else if(0x3fff<=offset & offset<0x7fff) {out8(DIO_PORTB,0x03);}		// 16383<X<32767
+	else if(0x7fff<=offset & offset<0xbfff) {out8(DIO_PORTB,0x07);}		// 32767<X<49151
+	else {out8(DIO_PORTB,0x0f);}						// >49151
 }
 
 int read_input(){
-dio_result = dio_read(DIO_PORTA);
+  dio_result = dio_read(DIO_PORTA);
 
-if(dio_result & 0x02){
-//Analog switch 1 = amplitude
-aio_source = "amplitude";
-}
-//else if(dio_result==0xf4){
-else{
-//Analog switch 1 = frequency
-aio_source = "frequency";
-}
+  if(dio_result & 0x04){
+  //square waveform
+  waveform = "SQUARE";
+  }
+  else{
+  //sine waveform
+  waveform = "SINE";
+  }
 
-ai0_result = aio_read(channel0);
-ai1_result = aio_read(channel1);
-//print value to screen
-printf("[%s]: %4x	",aio_source,(unsigned int)ai0_result);
-printf("[offset]: %4x \n",(unsigned int)ai1_result);
+  if(dio_result & 0x02){
+  //Analog switch 1 = amplitude
+  aio_source = "amplitude";
+  }
+  else{
+  //Analog switch 1 = frequency
+  aio_source = "frequency";
+  }
 
-//update LED
-led(ai1_result);
-
+  ai0_result = aio_read(channel0);
+  ai1_result = aio_read(channel1);
+  //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
+  printf("[%6s] ",waveform);
+  printf("[%s]: %4d	",aio_source,(unsigned int)ai0_result>>8);
+  printf("[offset]: %4d \n",(unsigned int)ai1_result>>8);
+  
+  //update LED
+  led(ai1_result);
 
 }

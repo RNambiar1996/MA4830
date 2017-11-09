@@ -31,3 +31,5 @@ uintptr_t iobase[6];
 uintptr_t dio_result;
 uint16_t ai0_result;
 uint16_t ai1_result;
+char* waveform;
+char* aio_source;
