@@ -1,27 +1,19 @@
 /*
  * Group members: Tan You Liang, Nicholas Adrian, Rahul Nambiar, Lee Ee Wei
  * Maintainer of "Main.c": Lee Ee Wei
- * Compile line: g++ -o The_G_Code Main.c System.c
+ * Compile line: gcc -o The_G_Code Main.c System.c -pthread -std=c11
+ * (might work without -std=c11)
  * 
-*/
+ * Justification for use of atomic
+ * https://stackoverflow.com/questions/15056237/which-is-more-efficient-basic-mutex-lock-or-atomic-integer
+ */
 
 #include "Global.h"
 #include "System.h"
-
+#include <string.h>
 
 int main(int argc, char *argv[])
 {
-    // Variables to read file_param
-    FILE *fp;           // file pointer
-    char *line_pointer = NULL; // line pointer for getline()
-    char *temp_str;     // temp string variable to help parse file
-    int size_of_line;   // size of line
-    int count;          // for loop counter
-    size_t read_line_size = 64;
-    const char *freq_str = "Frequency:";
-    const char *amp_str = "Amplitude:";
-    const char *offset_str = "Offset:";
-
     // Parse arguments
     if( argc != 3 ||                                      // Make sure only 2 arguments , otherwise show message and exit
         (strcmp(argv[1], "0") && strcmp(argv[1], "1")) )  // Check that Arg 1 is either '0' or '1'
@@ -39,7 +31,9 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    // signal_handle_spin();
+    // signal_handle_spin(); // check reuse_param, if true, do not catch ctrl + s // put kill switch to true here, if ctrl + c signal caught
+
+    // call system_shutdown
 
     return 0;
 }

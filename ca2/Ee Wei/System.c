@@ -9,39 +9,37 @@
 // #define _XOPEN_SOURCE 700
 // #define _XOPEN_SOURCE 700
 // #include <stdio.h>
-// #include <stdlib.h>
-// #include <string.h>
 
-// data types
-// #include <stdbool.h>
-
-// #include <sys/types.h>
-// #include <sys/stat.h>
-// #include <fcntl.h>
-// #include <unistd.h>
-// #include <signal.h>
-// #include <errno.h>
-// #include <pthread.h>
+#include <string.h>
+#include <stdlib.h>
+// #include <stdint.h>
+#include <stdbool.h>
+#include <stdatomic.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <signal.h>
+#include <errno.h>
+#include <pthread.h>
 
 // Declaration of global variables for all source codes
 double global_frequency;
 double global_amplitude;
 double global_offset;
-bool kill_switch;
+atomic_bool kill_switch;
+bool reuse_param;          // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
 sigset_t all_sig_mask_set; // set of signals to block all signals for all except 1 thread, the 1 thread will do signal handling
 
 // Initializing Mutexes
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t global_var_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// To keep track of thread ids if necessary
+// To keep track of thread ids, and for joining when terminating threads
 pthread_t oscilloscope_thread_handle; // output to oscilloscope thread
 pthread_t hardware_thread_handle;     // handles analog/digital hardware
 
-// bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup
-bool reuse_param;
-
-int system_init(char *D2A_port_selection, char *file_param )
+int system_init(const char *D2A_port_selection, const char *file_param )
 {
     // Declaration of variables
     bool D2A_Port;
@@ -102,7 +100,7 @@ int system_init(char *D2A_port_selection, char *file_param )
 
         free(temp_str);     // free temp_str memory that we malloc earlier
         free(line_pointer); // free line_pointer memory
-        fclose(fp);         // closes the stream, because we are good people
+        fclose(fp);         // close the stream, because we are good people
     }
     else // if file_param is "0"
     {
@@ -119,26 +117,39 @@ int system_init(char *D2A_port_selection, char *file_param )
     // setup signal handling mask set
     signal_handling_setup();
 
-    // // set pthread attributes and relevant things
+    // init and set pthread attributes to be joinable
     if( pthread_attr_init(&joinable_attr) ) // returns 0 on success
     {
         perror("pthread_attr_init");
         exit(EXIT_FAILURE);
     }
-
     if( pthread_attr_setdetachstate(&joinable_attr, PTHREAD_CREATE_JOINABLE) ) // returns 0 on success
     {
         perror("pthread_attr_setdetachstate");
         exit(EXIT_FAILURE);
     }
 
-    // Spawn all necessary threads
-    pthread_create( &oscilloscope_thread_handle, &joinable_attr, &output_osc_func, NULL );
-    pthread_create( &hardware_thread_handle, &joinable_attr, &hardware_handle_func, &D2A_Port );
-    //pthread_create( &sig_thandle, &joinable_attr, &sig_handle_func );
+    // Spawn all wanted threads
+    if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &output_osc_func, NULL ) ) // returns 0 on success
+    {
+        perror("pthread_create for output_osc_func");
+        exit(EXIT_FAILURE);
+    }
+    if( pthread_create( &hardware_thread_handle, &joinable_attr, &hardware_handle_func, &D2A_Port ) ) // returns 0 on success
+    {
+        perror("pthread_create for hardware_handle_func");
+        exit(EXIT_FAILURE);
+    }
 
     // Mask all signals
     //pthread_sigmask (SIG_SIG_SETMASK, &signal_mask, NULL);
+
+    // Destroys pthread attribute object before leaving this function
+    if( pthread_attr_destroy(&joinable_attr) ) // returns 0 on success
+    {
+        perror("pthread_attr_destroy");
+        exit(EXIT_FAILURE);
+    }
 
     return 0; // successfully init all threads
 }
@@ -159,4 +170,30 @@ void* hardware_handle_func(void* arg)
 void* output_osc_func(void* arg)
 {
 
+}
+
+void save_state(const bool *save_param)
+{
+
+}
+
+// basically just wait all threads to join, and check whether to save the param
+int system_shutdown(const bool *save_param)
+{
+    if (!reuse_param)
+        save_state(save_param);
+
+    // wait for threads to join
+    if( pthread_join(oscilloscope_thread_handle, NULL) ) // returns 0 on success
+    {
+        perror("pthread_join for oscilloscope_thread_handle");
+        exit(EXIT_FAILURE);
+    }
+    if( pthread_join(hardware_thread_handle, NULL) ) // returns 0 on success
+    {
+        perror("pthread_join for hardware_thread_handle");
+        exit(EXIT_FAILURE);
+    }
+    
+    return 0;
 }
