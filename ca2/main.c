@@ -8,7 +8,7 @@
 #include <hw/inout.h>
 #include <sys/neutrino.h>
 #include <sys/mman.h>
-#include "define.h"
+#include "hardware.h"
 #include "input.h"
 
 int badr[5];								// PCI 2.2 assigns 6 IO base addresses

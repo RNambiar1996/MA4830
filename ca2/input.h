@@ -5,7 +5,7 @@
 #include <hw/inout.h>
 #include <sys/neutrino.h>
 #include <sys/mman.h>
-#include "define.h"
+#include "hardware.h"
 
 void dio_setup(uint8_t ctlreg);
 
