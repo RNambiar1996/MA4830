@@ -44,12 +44,10 @@ int system_init(const char *D2A_port_selection, const char *file_param )
 
     // Variables to read file_param
     FILE *fp;                  // file pointer
-    //char *line_pointer = NULL; // line pointer for getline()
     char str_buffer[64];
     char *temp_str;            // temp string variable to help parse file
     int line_length = 0;        // size of line
     int count;                 // for loop counter
-    //size_t read_line_size = 0; // let getline() determine by itself
     // Just to make it a little bit more robust, instead of assuming they are in order
     const char *freq_str = "Frequency: ";
     const char *amp_str = "Amplitude: ";
@@ -71,14 +69,11 @@ int system_init(const char *D2A_port_selection, const char *file_param )
 
         // malloc to temp string pointer
         temp_str = (char *) malloc(64);
-        // getline() automatically malloc() or realloc() to line_pointer, so no need to do it ourself
 
         for ( count = 0; count < 4; ++count ) // 1 info line + 3 variables
         {
-            //length_of_line = get_line(&line_pointer, fp);
-
             // get entire line first
-            while( (str_buffer[line_length] = getc(fp)) != EOF )
+            while( (str_buffer[line_length] = getc(fp)) != '\n' )
                 ++line_length;
             
             if ( !strncmp(str_buffer, freq_str, strlen(freq_str) ) )
@@ -99,6 +94,10 @@ int system_init(const char *D2A_port_selection, const char *file_param )
                 strncpy( temp_str, &str_buffer[strlen(offset_str)], (line_length - strlen(offset_str)) ); // get value
                 global_offset = strtod( temp_str, NULL); // set value
             }
+
+            // clear string buffer, and line length variables
+            memset(str_buffer, 0, sizeof(str_buffer));
+            line_length = 0;
         }
 
         free(temp_str);     // free temp_str memory that we malloc earlier
@@ -116,7 +115,7 @@ int system_init(const char *D2A_port_selection, const char *file_param )
     }
 
     D2A_Port = D2A_port_selection[0] - '0'; // since we have confirmed Arg 1 is either '0' or '1', can do this directly
-
+    /*
     // setup signal handling mask set
     signal_handling_setup();
 
@@ -153,7 +152,7 @@ int system_init(const char *D2A_port_selection, const char *file_param )
         perror("pthread_attr_destroy");
         exit(EXIT_FAILURE);
     }
-
+    */
     return 0; // successfully init all threads
 }
 /*

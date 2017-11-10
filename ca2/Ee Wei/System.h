@@ -1,6 +1,5 @@
 /* Maintainer: Lee Ee Wei */
 
-#pragma once
 #ifndef _SYSTEM_H_
 #define _SYSTEM_H_
 
