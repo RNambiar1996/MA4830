@@ -58,6 +58,7 @@ void led(uint16_t offset){
 }
 
 int read_input(){
+  pthread_mutex_lock(&global_var_mutex);
   dio_result = dio_read(DIO_PORTA);
 
   if(dio_result & 0x08){
@@ -91,12 +92,15 @@ int read_input(){
   global_amplitude = af*aio_read(channel0);
   global_offset = aio_read(channel1);
   //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
+  pthread_mutex_lock(&print_mutex);
   printf("[%6s] ",w_source);
   if(af) printf("[%s]: %4d    ",aio_source,(unsigned int)global_amplitude>>8);
   else printf("[%s] : %4d    ",aio_source,(unsigned int)global_frequency>>8);
   printf("[offset]: %4d \n",(unsigned int)global_offset>>8);
+  pthread_mutex_unlock(&print_mutex);
   
   //update LED
   led(global_offset);
+  pthread_mutex_unlock(&global_var_mutex);
 
 }
