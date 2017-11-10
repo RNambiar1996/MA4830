@@ -17,6 +17,12 @@
 #include "input.h"
 #include "Global.h"
 
+bool waveform;
+bool af;
+uintptr_t dio_result;
+char* w_source;
+char* aio_source;
+
 uint16_t channel0 = 0x00;
 uint16_t channel1 = 0x01;
 
@@ -65,30 +71,32 @@ int read_input(){
 
   if(dio_result & 0x04){
   //square waveform
-  waveform = "SQUARE";
+  waveform = 1; w_source = "SQUARE";
   }
   else{
   //sine waveform
-  waveform = "SINE";
+  waveform = 0; w_source = "SINE";
   }
 
   if(dio_result & 0x02){
   //Analog switch 1 = amplitude
-  aio_source = "amplitude";
+  af = 1;aio_source="amplitude";
   }
   else{
   //Analog switch 1 = frequency
-  aio_source = "frequency";
+  af = 0;aio_source="frequency";
   }
 
-  ai0_result = aio_read(channel0);
-  ai1_result = aio_read(channel1);
+  global_frequency = (1-af)*aio_read(channel0);
+  global_amplitude = af*aio_read(channel0);
+  global_offset = aio_read(channel1);
   //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
-  printf("[%6s] ",waveform);
-  printf("[%s]: %4d	",aio_source,(unsigned int)ai0_result>>8);
-  printf("[offset]: %4d \n",(unsigned int)ai1_result>>8);
+  printf("[%6s] ",w_source);
+  if(af) printf("[%s]: %4d    ",aio_source,(unsigned int)global_amplitude>>8);
+  else printf("[%s] : %4d    ",aio_source,(unsigned int)global_frequency>>8);
+  printf("[offset]: %4d \n",(unsigned int)global_offset>>8);
   
   //update LED
-  led(ai1_result);
+  led(global_offset);
 
 }
