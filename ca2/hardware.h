@@ -25,5 +25,5 @@
 
 #define	DEBUG			0
 
-uintptr_t iobase[6];
+extern uintptr_t iobase[6];
 
