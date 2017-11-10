@@ -1,0 +1,4 @@
+hihi123
+Frequency: 100100
+Amplitude: 200
+Offset: 3
