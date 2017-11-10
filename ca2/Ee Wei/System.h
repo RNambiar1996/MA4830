@@ -20,6 +20,9 @@
 // system init
 int system_init(const char *D2A_port_selection, const char *file_param );
 
+// getline() function
+//int get_line(char **line_ptr, FILE *stream);
+
 // setup signal handling variables
 void signal_handling_setup();
 

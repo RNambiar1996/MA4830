@@ -5,16 +5,14 @@
 
 //#define _GNU_SOURCE
 //#define _XOPEN_SOURCE 700
-// #define _POSIX_C_SOURCE 200809L
-// #define _XOPEN_SOURCE 700
-// #define _XOPEN_SOURCE 700
-// #include <stdio.h>
+//#define _POSIX_C_SOURCE 200809L
+//#include <stdio.h>
 
 #include <string.h>
 #include <stdlib.h>
 // #include <stdint.h>
 #include <stdbool.h>
-#include <stdatomic.h>
+//#include <atomic.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -27,7 +25,7 @@
 double global_frequency;
 double global_amplitude;
 double global_offset;
-atomic_bool kill_switch;
+bool kill_switch;
 bool reuse_param;          // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
 sigset_t all_sig_mask_set; // set of signals to block all signals for all except 1 thread, the 1 thread will do signal handling
 
@@ -46,11 +44,12 @@ int system_init(const char *D2A_port_selection, const char *file_param )
 
     // Variables to read file_param
     FILE *fp;                  // file pointer
-    char *line_pointer = NULL; // line pointer for getline()
+    //char *line_pointer = NULL; // line pointer for getline()
+    char str_buffer[64];
     char *temp_str;            // temp string variable to help parse file
-    int length_of_line;        // size of line
+    int line_length = 0;        // size of line
     int count;                 // for loop counter
-    size_t read_line_size = 0; // let getline() determine by itself
+    //size_t read_line_size = 0; // let getline() determine by itself
     // Just to make it a little bit more robust, instead of assuming they are in order
     const char *freq_str = "Frequency: ";
     const char *amp_str = "Amplitude: ";
@@ -76,30 +75,34 @@ int system_init(const char *D2A_port_selection, const char *file_param )
 
         for ( count = 0; count < 4; ++count ) // 1 info line + 3 variables
         {
-            length_of_line = getline(&line_pointer, &read_line_size, fp);
+            //length_of_line = get_line(&line_pointer, fp);
+
+            // get entire line first
+            while( (str_buffer[line_length] = getc(fp)) != EOF )
+                ++line_length;
             
-            if ( !strncmp(line_pointer, freq_str, strlen(freq_str) ) )
+            if ( !strncmp(str_buffer, freq_str, strlen(freq_str) ) )
             {
                 memset( temp_str, '\0', sizeof(temp_str)); // clear string
-                strncpy( temp_str, &line_pointer[strlen(freq_str)], (length_of_line - strlen(freq_str)) ); // get value
+                strncpy( temp_str, &str_buffer[strlen(freq_str)], (line_length - strlen(freq_str)) ); // get value
                 global_frequency = strtod( temp_str, NULL); // set value
             }
-            else if ( !strncmp(line_pointer, amp_str, strlen(amp_str) ) )
+            else if ( !strncmp(str_buffer, amp_str, strlen(amp_str) ) )
             {
                 memset( temp_str, '\0', sizeof(temp_str)); // clear string
-                strncpy( temp_str, &line_pointer[strlen(amp_str)], (length_of_line - strlen(amp_str)) ); // get value
+                strncpy( temp_str, &str_buffer[strlen(amp_str)], (line_length - strlen(amp_str)) ); // get value
                 global_amplitude = strtod( temp_str, NULL); // set value
             }
-            else if ( !strncmp(line_pointer, offset_str, strlen(offset_str) ) )
+            else if ( !strncmp(str_buffer, offset_str, strlen(offset_str) ) )
             {
                 memset( temp_str, '\0', sizeof(temp_str)); // clear string
-                strncpy( temp_str, &line_pointer[strlen(offset_str)], (length_of_line - strlen(offset_str)) ); // get value
+                strncpy( temp_str, &str_buffer[strlen(offset_str)], (line_length - strlen(offset_str)) ); // get value
                 global_offset = strtod( temp_str, NULL); // set value
             }
         }
 
         free(temp_str);     // free temp_str memory that we malloc earlier
-        free(line_pointer); // free line_pointer memory
+        //free(line_pointer); // free line_pointer memory
         fclose(fp);         // close the stream, because we are good people
     }
     else // if file_param is "0"
@@ -153,7 +156,24 @@ int system_init(const char *D2A_port_selection, const char *file_param )
 
     return 0; // successfully init all threads
 }
+/*
+//  length_of_line = getline(&line_pointer, &read_line_size, fp);
+int get_line(char **line_ptr, FILE *stream)
+{
+	int line_length = 0;
+	char buffer;
+    char str_buffer[64];
 
+	while( (str_buffer[0] = getc(stream)) != EOF )
+	{
+		line_ptr[line_length] = (char*)buffer;
+		//++line_ptr;
+		++line_length;
+	}
+
+	return line_length;
+}
+*/
 void signal_handling_setup()
 {
     // empty the signal set first
