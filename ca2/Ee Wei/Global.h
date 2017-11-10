@@ -29,6 +29,7 @@
 #define DEFAULT_AMPLITUDE 10
 #define DEFAULT_OFFSET 1
 
+extern uintptr_t iobase[6];
 extern double global_frequency;
 extern double global_amplitude;
 extern double global_offset;

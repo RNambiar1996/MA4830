@@ -112,6 +112,7 @@ void led(uint16_t offset){
 }
 
 int read_input(){
+  pthread_sigmask(SIG_SIG_SETMASK,&signal_mask,NULL);
   pthread_mutex_lock(&global_var_mutex);
   dio_result = dio_read(DIO_PORTA);
 
