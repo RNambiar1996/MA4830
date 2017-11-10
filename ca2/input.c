@@ -1,4 +1,5 @@
 /*
+[X] read digital input switch 1: killswitch
 [X] read digital input switch 2: sine vs square waveform
 [X] read analog input switch 1: amplitude/frequency value
 [X] read analog input switch 2: offset value
@@ -12,8 +13,9 @@
 #include <hw/inout.h>
 #include <sys/neutrino.h>
 #include <sys/mman.h>
-//#include "define.h"
+//#include "hardware.h"
 #include "input.h"
+#include "Global.h"
 
 uint16_t channel0 = 0x00;
 uint16_t channel1 = 0x01;
@@ -51,6 +53,15 @@ void led(uint16_t offset){
 
 int read_input(){
   dio_result = dio_read(DIO_PORTA);
+
+  if(dio_result & 0x08){
+  //kill_switch on
+  kill_switch = 1;
+  }
+  else{
+  //kill_switch off
+  kill_switch = 0;
+  }
 
   if(dio_result & 0x04){
   //square waveform
