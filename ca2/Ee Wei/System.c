@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>
+#include <time.h>
 
 // Declaration of global variables for all source codes
 double global_frequency;
@@ -28,6 +29,7 @@ double global_offset;
 bool kill_switch;
 bool reuse_param;          // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
 sigset_t all_sig_mask_set; // set of signals to block all signals for all except 1 thread, the 1 thread will do signal handling
+char *outputPath = "./output.txt";
 
 // Initializing Mutexes
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -219,24 +221,53 @@ int system_shutdown(const bool *save_param)
 
 void  INThandler(int sig)
 {
-    char  c;
-    //  signal(sig, SIG_IGN);
-    printf("!OUCH, did you hit Ctrl-C?\n"
-            "Enter 's' to save, 'q' to quit!, others to continue \n");
-    c = getchar();
-    // printf("this is the char %c|\n", c);
-    if (c == 'q' || c == 'Q'){
+    char  c[20];
+
+    //  get global var and lock mutex
+    pthread_mutex_lock( &global_var_mutex );
+    printf("\n-----------------OUCH, did you hit Ctrl-C?--------------\n"
+            "Enter 's' to save, 'q' to quit!, other inputs to continue\n");
+    scanf("%s" , c);
+
+    if ( !strcmp(c,"q") || !strcmp(c,"Q") ){
         printf("You clicked exit!\n");
         exit(0);
     }
-    else if(c == 's' || c == 'S'){
+    else if( !strcmp(c,"s") || !strcmp(c,"S") ){
         printf("Saving param!\n");
-
-2w21
+        if (!outputFile(outputPath)){
+            printf("OUTPUT PARAM FAILED!!\n");
+        }
     }
     else{
-        printf("Continue process\n");
+        printf("No valid input, Continue process\n");
         signal(SIGINT, INThandler);
     }
-    getchar(); // Get new line character
+    pthread_mutex_unlock( &global_var_mutex );
+    printf("------------  Resume  -----------\n");
+
+}
+
+
+//output user's current param to file 
+int outputFile(char *path){
+
+	FILE *fptr;
+    fptr = fopen(path,"w");
+    //output time in file
+	time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    
+    printf("Output Path is %s\n", path);
+
+	if(fptr == NULL)
+	{
+	   printf("Error with writing! Invalid Path\n");   
+	   return 0;             
+	}
+    fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tm.tm_year-100, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+    fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\nOffset: \n%lf",global_frequency, global_amplitude, global_offset);
+	fclose(fptr);
+    printf("SAVED!\n");
+	return 1;
 }

@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     printf("starts");
     signal(SIGINT, INThandler); //ctrl-C
     
-    // call system_shutdown
+    // halt system prevent it to end
     while(1){
         pause();
     }
