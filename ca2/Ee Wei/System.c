@@ -216,3 +216,27 @@ int system_shutdown(const bool *save_param)
     
     return 0;
 }
+
+void  INThandler(int sig)
+{
+    char  c;
+    //  signal(sig, SIG_IGN);
+    printf("!OUCH, did you hit Ctrl-C?\n"
+            "Enter 's' to save, 'q' to quit!, others to continue \n");
+    c = getchar();
+    // printf("this is the char %c|\n", c);
+    if (c == 'q' || c == 'Q'){
+        printf("You clicked exit!\n");
+        exit(0);
+    }
+    else if(c == 's' || c == 'S'){
+        printf("Saving param!\n");
+
+2w21
+    }
+    else{
+        printf("Continue process\n");
+        signal(SIGINT, INThandler);
+    }
+    getchar(); // Get new line character
+}

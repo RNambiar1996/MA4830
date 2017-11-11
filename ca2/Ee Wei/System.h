@@ -29,7 +29,7 @@ void signal_handling_setup();
 void* hardware_handle_func(void*); // Nicholas
 void* output_osc_func(void*); // Rahul
 void save_state(const bool *save_param); // You Liang
-
+void  INThandler(int sig);
 int system_shutdown(const bool *save_param);
 
 //int system_shutdown(); // probably need arg
