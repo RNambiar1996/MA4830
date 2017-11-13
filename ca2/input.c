@@ -19,7 +19,7 @@
 #include "Global.h"
 
 bool waveform;
-bool af;
+bool fo;
 uintptr_t dio_result;
 char* w_source;
 char* aio_source;
@@ -135,17 +135,17 @@ int read_input(){
   }
 
   if(dio_result & 0x02){
-  //Analog switch 1 = amplitude
-  af = 1;aio_source="amplitude";
+  //Analog switch 1 = offset
+  fo = 1;aio_source="offset";
   }
   else{
   //Analog switch 1 = frequency
-  af = 0;aio_source="frequency";
+  fo = 0;aio_source="frequency";
   }
 
-  global_frequency = (1-af)*aio_read(channel0);
-  global_amplitude = af*aio_read(channel0);
-  global_offset = aio_read(channel1);
+  if(1-fo) global_frequency = aio_read(channel0);
+  else global_offset = aio_read(channel0);
+  global_amplitude = aio_read(channel1);
   //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
   pthread_mutex_lock(&print_mutex);
   printf("[%6s] ",w_source);
