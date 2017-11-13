@@ -103,12 +103,12 @@ uint16_t aio_read(uint16_t channel){
 	return in16(AD_DATA);
 }
 
-void led(uint16_t offset){
-	if(offset<0x0190){out8(DIO_PORTB,0x00);}				// <400
-	else if(0x0190<=offset & offset<0x3fff){out8(DIO_PORTB,0x01);}		// 400<X<16383
-        else if(0x3fff<=offset & offset<0x7fff) {out8(DIO_PORTB,0x03);}		// 16383<X<32767
-	else if(0x7fff<=offset & offset<0xbfff) {out8(DIO_PORTB,0x07);}		// 32767<X<49151
-	else {out8(DIO_PORTB,0x0f);}						// >49151
+void led(uint16_t lvl){
+	if(lvl<0x0190){out8(DIO_PORTB,0x00);}				// <400
+	else if(0x0190<=lvl & lvl<0x3fff){out8(DIO_PORTB,0x01);}	// 400<X<16383
+        else if(0x3fff<=lvl & lvl<0x7fff) {out8(DIO_PORTB,0x03);}	// 16383<X<32767
+	else if(0x7fff<=lvl & lvl<0xbfff) {out8(DIO_PORTB,0x07);}	// 32767<X<49151
+	else {out8(DIO_PORTB,0x0f);}					// >49151
 }
 
 int read_input(){
@@ -155,7 +155,7 @@ int read_input(){
   pthread_mutex_unlock(&print_mutex);
   
   //update LED
-  led(global_offset);
+  led(global_amplitude);
   pthread_mutex_unlock(&global_var_mutex);
 
 }
