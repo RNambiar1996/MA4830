@@ -2,6 +2,7 @@
 
 #include "Global.h"
 #include "System.h"
+#include "hardware.h"
 
 //#define _GNU_SOURCE
 //#define _XOPEN_SOURCE 700
@@ -28,15 +29,17 @@ double global_frequency;
 double global_amplitude;
 double global_offset;
 bool kill_switch;
+bool info_switch;
+bool waveform;
 bool system_pause;
 bool reuse_param;          // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
 sigset_t all_sig_mask_set; // set of signals to block all signals for all except 1 thread, the 1 thread will do signal handling
 char *outputPath = "./output.txt";
 
-// Initializing Mutexes
-pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t global_var_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t global_stop_mutex = PTHREAD_MUTEX_INITIALIZER;
+// Mutexes
+pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;       // for printing to terminal screen
+pthread_mutex_t global_var_mutex = PTHREAD_MUTEX_INITIALIZER;  // for global frequency, amplitude, offset
+pthread_mutex_t global_stop_mutex = PTHREAD_MUTEX_INITIALIZER; // for kill_switch, info_switch, system_pause
 
 // To keep track of thread ids, and for joining when terminating threads
 pthread_t oscilloscope_thread_handle; // output to oscilloscope thread
@@ -44,12 +47,10 @@ pthread_t hardware_thread_handle;     // handles analog/digital hardware
 
 // global variable for only this source code
 bool first_info; // boolean for printing info for the first time
+bool info_switch_prev; // for debounce
 
 int system_init(const char *D2A_port_selection, const char *file_param )
 {
-    // Declaration of variables
-    bool D2A_Port;
-
     // Variables to read file_param
     FILE *fp;                  // file pointer
     char str_buffer[64];
@@ -65,8 +66,11 @@ int system_init(const char *D2A_port_selection, const char *file_param )
     pthread_attr_t joinable_attr;
 
     // initializations
-    kill_switch = false;
-    first_info = true; // check whether info is printed for the first time, if yes, do not display save instructions
+    kill_switch = false;  // for ctrl + c
+    first_info = true;    // check whether info is printed for the first time, if yes, do not display save instructions and etc
+    waveform = 0;         // waveform defaults to 0, which is sine wave
+    info_switch = 0;      // for info toggle switch
+    info_switch_prev = 0; // for debounce
 
     // Check validity of file_param
     if ( strcmp(file_param, "0") ) // if file_param is not "0"
@@ -122,13 +126,12 @@ int system_init(const char *D2A_port_selection, const char *file_param )
         global_offset    = DEFAULT_OFFSET;
     }
 
-    D2A_Port = D2A_port_selection[0] - '0'; // since we have confirmed Arg 1 is either '0' or '1', can do this directly
-
     // setup signal handling mask set
     signal_handling_setup();
 
     // init hardware
     pci_setup();
+    dio_setup();
 
     // init and set pthread attributes to be joinable
     if( pthread_attr_init(&joinable_attr) ) // returns 0 on success
@@ -143,12 +146,12 @@ int system_init(const char *D2A_port_selection, const char *file_param )
     }
 
     // Spawn all wanted threads
-    if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &output_osc_func, &D2A_Port ) ) // returns 0 on success
+    if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generate_wave, NULL ) ) // returns 0 on success
     {
         perror("pthread_create for output_osc_func");
         exit(EXIT_FAILURE);
     }
-    if( pthread_create( &hardware_thread_handle, &joinable_attr, &hardware_handle_func, NULL ) ) // returns 0 on success
+    if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_input, NULL ) ) // returns 0 on success
     {
         perror("pthread_create for hardware_handle_func");
         exit(EXIT_FAILURE);
@@ -191,12 +194,12 @@ void save_state(const bool *save_param)
 }
 
 // basically just wait all threads to join, and check whether to save the param
-void system_shutdown(const bool save_param)
+void system_shutdown()
 {
-    void *status;
+    int *status;
 
-    if (!reuse_param)
-        save_state(save_param);
+    // if (!reuse_param)
+    //     save_state(save_param);
 
     // wait for threads to join
     // if( pthread_join(oscilloscope_thread_handle, NULL) ) // returns 0 on success
@@ -215,11 +218,6 @@ void system_shutdown(const bool save_param)
     kill_switch = true;
     pthread_mutex_unlock( &global_stop_mutex );
 
-    // values may still be updating by the hardware thread at this point, mutex to be safe
-    pthread_mutex_lock( &print_mutex );
-    printf("\"ctrl+c\" detected, ending program");
-    pthread_mutex_lock( &print_mutex );
-
     // waiting for all threads to join
     // Wait for oscilloscope output thread to join
     if( pthread_join(oscilloscope_thread_handle, &status) ) // returns 0 on success
@@ -236,14 +234,19 @@ void system_shutdown(const bool save_param)
     }
 
     // no need mutex, all threads have terminated
-    printf("All threads terminated. Good bye.");
+    printf("All threads terminated. Ending The G Code. Good bye.");
 
     exit(EXIT_SUCCESS);
 }
 
 void INThandler(int sig) // handles SIGINT
 {
-    
+    // alerts ctrl+c detection to user
+    pthread_mutex_lock( &print_mutex );
+    printf("\"ctrl+c\" detected, ending program");
+    pthread_mutex_lock( &print_mutex );
+
+    system_shutdown();
     //char c[32];
 
     // get global var and lock mutex
@@ -252,8 +255,6 @@ void INThandler(int sig) // handles SIGINT
     // pthread_mutex_lock( &global_stop_mutex );
     // system_pause = true;
     // pthread_mutex_unlock( &global_stop_mutex );
-
-
 
     // printf("\n---------- HI, did you hit \"ctrl + c\"? ----------\n");
 
@@ -284,9 +285,8 @@ void INThandler(int sig) // handles SIGINT
     // printf("----------  Resuming  ----------\n");
 }
 
-
 //output user's current param to file 
-int outputFile(char *path){
+int outputFile(const char *path){
 
 	FILE *fptr;
     fptr = fopen(path, "w");
@@ -316,18 +316,20 @@ void flush_input()
 
 void print_info()
 {
+    char input[32];
+
     flush_input();   // so that "press any key to continue..." below works
     system("clear"); // clears the screen
 
     if ( first_info )
         printf("---------- Welcome! This program outputs waveform to the oscilloscope. ----------\n\n");
 
-    if ( !first_info ) // if first_info == false, means all threads are initialized
-    { 
-        pthread_mutex_lock( &global_stop_mutex );
-        system_pause = true;
-        pthread_mutex_unlock( &global_stop_mutex );
-    }
+    // if ( !first_info ) // if first_info == false, means all threads are initialized
+    // { 
+    //     pthread_mutex_lock( &global_stop_mutex );
+    //     system_pause = true;
+    //     pthread_mutex_unlock( &global_stop_mutex );
+    // }
 
     printf("  -Instructions:\n");
     printf("    -Toggle switches(from left to right):\n");
@@ -336,15 +338,17 @@ void print_info()
     printf("       c. frequency/offset (to choose the parameter for analog input a)\n");
     printf("    -Analog input(from left to right):\n");
     printf("       a. D/A 0            (changes frequency/offset depending on toggle switch c)\n");
-    printf("       b. D/A 1            (changes amplitued of wave)\n");
+    printf("       b. D/A 1            (changes amplitude of wave)\n");
+    printf("    -The program outputs to A/D 0 port.\n");
     printf("    -Number of LED lit up shows the amplitude level.\n");
     printf("    -The program will update the terminal screen with the latest values of frequency, amplitude, and offset.\n");
     printf("    -Instructions to save the parameters will be displayed after \"ctrl+c\" is entered.\n\n");
-    printf("If you would like to see the instructions again and/or save the parameter, please enter \"ctrl+c\"\n\n");
+    printf("    -If you would like to see the instructions again and/or save the parameter, please enter \"ctrl+c\"\n");
+    printf("    -After \"ctrl+c\" is detected, the hardware will stop updating the values.\n\n");
 
     if ( !first_info )
-    { // display extra instructions/info
-        // current values
+    { // display save instructions and current value info
+        // current values, no need mutex, system_pause == true will stop writing of these
         printf("  Current frequency: %lf\n", global_frequency);
         printf("  Current amplitude: %lf\n", global_amplitude);
         printf("  Current offset: %lf\n\n", global_offset);
@@ -352,9 +356,33 @@ void print_info()
         // save instructions/info
         printf("Enter 's' to save, 'q' to quit!, other inputs to continue\n");
 
+        scanf("%[^\n]s", input);
+
+        if ( !strcmp(input, "q") || !strcmp(input, "Q") )
+        {
+            printf("Shutting down program!\n");
+            system_shutdown();
+        }
+        else if( !strcmp(input, "s") || !strcmp(input, "S") )
+        {
+            printf("Saving param!\n");
+            if ( !outputFile(outputPath) )
+            {
+                printf("OUTPUT PARAM FAILED!!\n");
+            }
+        }
+        else
+        {
+            printf("Continuing program.\n");
+            signal(SIGINT, INThandler);
+        }
+
         pthread_mutex_lock( &global_stop_mutex );
         system_pause = false;
         pthread_mutex_unlock( &global_stop_mutex );
+
+        printf("----------  Resuming The G Code ----------\n");
+        delay(1000); // stop 1 second to display the previous line's printf()
     }
 
     if ( first_info )
@@ -363,4 +391,21 @@ void print_info()
         first_info = false;
         getc(stdin);
     }
+}
+
+void check_info_switch()
+{
+    pthread_mutex_lock( &global_stop_mutex );
+
+    if ( info_switch != info_switch_prev ) // checks for info_switch toggle
+    {
+        info_switch_prev = info_switch;
+        system_pause = true;
+    }
+
+    pthread_mutex_unlock( &global_stop_mutex );
+
+    if ( system_pause ) // no need mutex, only main thread writes to system_pause variable
+        print_info();
+
 }

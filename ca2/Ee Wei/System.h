@@ -26,13 +26,15 @@ void signal_handling_setup();
 void* hardware_handle_func(void*); // Nicholas
 void* output_osc_func(void*); // Rahul
 void save_state(const bool *save_param); // You Liang
-void  INThandler(int sig);
-void system_shutdown(const bool save_param);
+void INThandler(int sig);
+void system_shutdown();
+
+int outputFile(const char *path);
 
 void flush_input();
 
 void print_info();
 
-//int system_shutdown(); // probably need arg
+void check_info_switch();
 
 #endif

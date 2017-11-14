@@ -24,6 +24,7 @@ extern double global_frequency;
 extern double global_amplitude;
 extern double global_offset;
 extern bool kill_switch;
+extern bool info_switch;
 extern bool waveform;
 extern bool reuse_param;
 extern sigset_t all_sig_mask_set;
