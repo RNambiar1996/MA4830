@@ -7,6 +7,8 @@
 #include <sys/mman.h>
 #include "hardware.h"
 
+void pci_setup();
+
 void dio_setup(uint8_t ctlreg);
 
 uintptr_t dio_read(uintptr_t dio_port);

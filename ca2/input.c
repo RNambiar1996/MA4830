@@ -5,6 +5,7 @@
 [X] read analog input switch 2: offset value
 [X] rescaled analog uint16 bit to uint8 bit
 [X] update LED
+[X] implement global_var_mutex and print_mutex
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,8 +18,67 @@
 #include "input.h"
 #include "Global.h"
 
+bool waveform;
+bool fo;
+uintptr_t dio_result;
+char* w_source;
+char* aio_source;
+
 uint16_t channel0 = 0x00;
 uint16_t channel1 = 0x01;
+
+void pci_setup(){
+	uintptr_t iobase[6];
+	struct pci_dev_info info;
+	void *hdl;
+	
+	memset(&info,0,sizeof(info));
+	if(pci_attach(0)<0) {
+	  perror("pci_attach");
+	  exit(EXIT_FAILURE);
+	  }
+	
+	info.VendorId=0x1307;								// Vendor and Device ID
+	info.DeviceId=0x01;
+	
+	if ((hdl=pci_attach_device(0, PCI_SHARE|PCI_INIT_ALL, 0, &info))==0) {
+	  perror("pci_attach_device");
+	  exit(EXIT_FAILURE);
+	  }
+	
+	if (DEBUG){  
+	  for(i=0;i<6;i++) {							// Another printf BUG ? - Break printf to two statements
+	    if(info.BaseAddressSize[i]>0) {
+	      printf("Aperture %d  Base 0x%x Length %d Type %s\n", i, 
+	        PCI_IS_MEM(info.CpuBaseAddress[i]) ?  (int)PCI_MEM_ADDR(info.CpuBaseAddress[i]) : 
+	        (int)PCI_IO_ADDR(info.CpuBaseAddress[i]),info.BaseAddressSize[i], 
+	        PCI_IS_MEM(info.CpuBaseAddress[i]) ? "MEM" : "IO");
+	      }
+	  }  
+	
+	    														
+	printf("IRQ %d\n",info.Irq); 		
+	}
+	
+	if(DEBUG)printf("\nDAS 1602 Base addresses:\n\n");
+	for(i=0;i<5;i++) {
+	  badr[i]=PCI_IO_ADDR(info.CpuBaseAddress[i]);
+	  if(DEBUG) printf("Badr[%d] : %x\n", i, badr[i]);
+	  }
+	 
+		printf("\nReconfirm Iobase:\n");  			// map I/O base address to user space						
+	for(i=0;i<5;i++) {								// expect CpuBaseAddress to be the same as iobase for PC
+	  iobase[i]=mmap_device_io(0x0f,badr[i]);	
+	  if(DEBUG) printf("Index %d : Address : %x ", i,badr[i]);
+	  if(DEBUG) printf("IOBASE  : %x \n",iobase[i]);
+	  }													
+	
+															// Modify thread control privity
+	if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
+	  perror("Thread Control");
+	  exit(1);
+	  }				
+}
 
 void dio_setup(uint8_t ctlreg){
 	out8(DIO_CTLREG,ctlreg);		//Digital CTLREG
@@ -43,15 +103,17 @@ uint16_t aio_read(uint16_t channel){
 	return in16(AD_DATA);
 }
 
-void led(uint16_t offset){
-	if(offset<0x0190){out8(DIO_PORTB,0x00);}				// <400
-	else if(0x0190<=offset & offset<0x3fff){out8(DIO_PORTB,0x01);}		// 400<X<16383
-        else if(0x3fff<=offset & offset<0x7fff) {out8(DIO_PORTB,0x03);}		// 16383<X<32767
-	else if(0x7fff<=offset & offset<0xbfff) {out8(DIO_PORTB,0x07);}		// 32767<X<49151
-	else {out8(DIO_PORTB,0x0f);}						// >49151
+void led(uint16_t lvl){
+	if(lvl<0x0190){out8(DIO_PORTB,0x00);}				// <400
+	else if(0x0190<=lvl & lvl<0x3fff){out8(DIO_PORTB,0x01);}	// 400<X<16383
+        else if(0x3fff<=lvl & lvl<0x7fff) {out8(DIO_PORTB,0x03);}	// 16383<X<32767
+	else if(0x7fff<=lvl & lvl<0xbfff) {out8(DIO_PORTB,0x07);}	// 32767<X<49151
+	else {out8(DIO_PORTB,0x0f);}					// >49151
 }
 
 int read_input(){
+  pthread_sigmask(SIG_SIG_SETMASK,&signal_mask,NULL);
+  pthread_mutex_lock(&global_var_mutex);
   dio_result = dio_read(DIO_PORTA);
 
   if(dio_result & 0x08){
@@ -65,30 +127,35 @@ int read_input(){
 
   if(dio_result & 0x04){
   //square waveform
-  waveform = "SQUARE";
+  waveform = 1; w_source = "SQUARE";
   }
   else{
   //sine waveform
-  waveform = "SINE";
+  waveform = 0; w_source = "SINE";
   }
 
   if(dio_result & 0x02){
-  //Analog switch 1 = amplitude
-  aio_source = "amplitude";
+  //Analog switch 1 = offset
+  fo = 1;aio_source="offset";
   }
   else{
   //Analog switch 1 = frequency
-  aio_source = "frequency";
+  fo = 0;aio_source="frequency";
   }
 
-  ai0_result = aio_read(channel0);
-  ai1_result = aio_read(channel1);
+  if(1-fo) global_frequency = aio_read(channel0);
+  else global_offset = aio_read(channel0);
+  global_amplitude = aio_read(channel1);
   //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
-  printf("[%6s] ",waveform);
-  printf("[%s]: %4d	",aio_source,(unsigned int)ai0_result>>8);
-  printf("[offset]: %4d \n",(unsigned int)ai1_result>>8);
+  pthread_mutex_lock(&print_mutex);
+  printf("[%6s] ",w_source);
+  if(af) printf("[%s]: %4d    ",aio_source,(unsigned int)global_amplitude>>8);
+  else printf("[%s] : %4d    ",aio_source,(unsigned int)global_frequency>>8);
+  printf("[offset]: %4d \n",(unsigned int)global_offset>>8);
+  pthread_mutex_unlock(&print_mutex);
   
   //update LED
-  led(ai1_result);
+  led(global_amplitude);
+  pthread_mutex_unlock(&global_var_mutex);
 
 }

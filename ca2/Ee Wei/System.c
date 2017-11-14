@@ -23,6 +23,7 @@
 #include <time.h>
 
 // Declaration of global variables for all source codes
+uintptr_t iobase[6];
 double global_frequency;
 double global_amplitude;
 double global_offset;
