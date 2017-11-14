@@ -32,8 +32,12 @@ int main(int argc, char *argv[])
     }
 
     // signal_handle_spin(); // check reuse_param, if true, do not catch ctrl + s // put kill switch to true here, if ctrl + c signal caught
-
-    // call system_shutdown
-
+    printf("starts");
+    signal(SIGINT, INThandler); //ctrl-C
+    
+    // halt system prevent it to end
+    while(1){
+        pause();
+    }
     return 0;
 }

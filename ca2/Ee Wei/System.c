@@ -5,16 +5,14 @@
 
 //#define _GNU_SOURCE
 //#define _XOPEN_SOURCE 700
-// #define _POSIX_C_SOURCE 200809L
-// #define _XOPEN_SOURCE 700
-// #define _XOPEN_SOURCE 700
-// #include <stdio.h>
+//#define _POSIX_C_SOURCE 200809L
+//#include <stdio.h>
 
 #include <string.h>
 #include <stdlib.h>
 // #include <stdint.h>
 #include <stdbool.h>
-#include <stdatomic.h>
+//#include <atomic.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -22,15 +20,17 @@
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>
+#include <time.h>
 
 // Declaration of global variables for all source codes
 uintptr_t iobase[6];
 double global_frequency;
 double global_amplitude;
 double global_offset;
-atomic_bool kill_switch;
+bool kill_switch;
 bool reuse_param;          // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
 sigset_t all_sig_mask_set; // set of signals to block all signals for all except 1 thread, the 1 thread will do signal handling
+char *outputPath = "./output.txt";
 
 // Initializing Mutexes
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -47,11 +47,10 @@ int system_init(const char *D2A_port_selection, const char *file_param )
 
     // Variables to read file_param
     FILE *fp;                  // file pointer
-    char *line_pointer = NULL; // line pointer for getline()
+    char str_buffer[64];
     char *temp_str;            // temp string variable to help parse file
-    int length_of_line;        // size of line
+    int line_length = 0;        // size of line
     int count;                 // for loop counter
-    size_t read_line_size = 0; // let getline() determine by itself
     // Just to make it a little bit more robust, instead of assuming they are in order
     const char *freq_str = "Frequency: ";
     const char *amp_str = "Amplitude: ";
@@ -73,34 +72,39 @@ int system_init(const char *D2A_port_selection, const char *file_param )
 
         // malloc to temp string pointer
         temp_str = (char *) malloc(64);
-        // getline() automatically malloc() or realloc() to line_pointer, so no need to do it ourself
 
         for ( count = 0; count < 4; ++count ) // 1 info line + 3 variables
         {
-            length_of_line = getline(&line_pointer, &read_line_size, fp);
+            // get entire line first
+            while( (str_buffer[line_length] = getc(fp)) != '\n' )
+                ++line_length;
             
-            if ( !strncmp(line_pointer, freq_str, strlen(freq_str) ) )
+            if ( !strncmp(str_buffer, freq_str, strlen(freq_str) ) )
             {
                 memset( temp_str, '\0', sizeof(temp_str)); // clear string
-                strncpy( temp_str, &line_pointer[strlen(freq_str)], (length_of_line - strlen(freq_str)) ); // get value
+                strncpy( temp_str, &str_buffer[strlen(freq_str)], (line_length - strlen(freq_str)) ); // get value
                 global_frequency = strtod( temp_str, NULL); // set value
             }
-            else if ( !strncmp(line_pointer, amp_str, strlen(amp_str) ) )
+            else if ( !strncmp(str_buffer, amp_str, strlen(amp_str) ) )
             {
                 memset( temp_str, '\0', sizeof(temp_str)); // clear string
-                strncpy( temp_str, &line_pointer[strlen(amp_str)], (length_of_line - strlen(amp_str)) ); // get value
+                strncpy( temp_str, &str_buffer[strlen(amp_str)], (line_length - strlen(amp_str)) ); // get value
                 global_amplitude = strtod( temp_str, NULL); // set value
             }
-            else if ( !strncmp(line_pointer, offset_str, strlen(offset_str) ) )
+            else if ( !strncmp(str_buffer, offset_str, strlen(offset_str) ) )
             {
                 memset( temp_str, '\0', sizeof(temp_str)); // clear string
-                strncpy( temp_str, &line_pointer[strlen(offset_str)], (length_of_line - strlen(offset_str)) ); // get value
+                strncpy( temp_str, &str_buffer[strlen(offset_str)], (line_length - strlen(offset_str)) ); // get value
                 global_offset = strtod( temp_str, NULL); // set value
             }
+
+            // clear string buffer, and line length variables
+            memset(str_buffer, 0, sizeof(str_buffer));
+            line_length = 0;
         }
 
         free(temp_str);     // free temp_str memory that we malloc earlier
-        free(line_pointer); // free line_pointer memory
+        //free(line_pointer); // free line_pointer memory
         fclose(fp);         // close the stream, because we are good people
     }
     else // if file_param is "0"
@@ -114,7 +118,7 @@ int system_init(const char *D2A_port_selection, const char *file_param )
     }
 
     D2A_Port = D2A_port_selection[0] - '0'; // since we have confirmed Arg 1 is either '0' or '1', can do this directly
-
+    /*
     // setup signal handling mask set
     signal_handling_setup();
 
@@ -151,10 +155,27 @@ int system_init(const char *D2A_port_selection, const char *file_param )
         perror("pthread_attr_destroy");
         exit(EXIT_FAILURE);
     }
-
+    */
     return 0; // successfully init all threads
 }
+/*
+//  length_of_line = getline(&line_pointer, &read_line_size, fp);
+int get_line(char **line_ptr, FILE *stream)
+{
+	int line_length = 0;
+	char buffer;
+    char str_buffer[64];
 
+	while( (str_buffer[0] = getc(stream)) != EOF )
+	{
+		line_ptr[line_length] = (char*)buffer;
+		//++line_ptr;
+		++line_length;
+	}
+
+	return line_length;
+}
+*/
 void signal_handling_setup()
 {
     // empty the signal set first
@@ -197,4 +218,57 @@ int system_shutdown(const bool *save_param)
     }
     
     return 0;
+}
+
+void  INThandler(int sig)
+{
+    char  c[20];
+
+    //  get global var and lock mutex
+    pthread_mutex_lock( &global_var_mutex );
+    printf("\n-----------------OUCH, did you hit Ctrl-C?--------------\n"
+            "Enter 's' to save, 'q' to quit!, other inputs to continue\n");
+    scanf("%s" , c);
+
+    if ( !strcmp(c,"q") || !strcmp(c,"Q") ){
+        printf("You clicked exit!\n");
+        exit(0);
+    }
+    else if( !strcmp(c,"s") || !strcmp(c,"S") ){
+        printf("Saving param!\n");
+        if (!outputFile(outputPath)){
+            printf("OUTPUT PARAM FAILED!!\n");
+        }
+    }
+    else{
+        printf("No valid input, Continue process\n");
+        signal(SIGINT, INThandler);
+    }
+    pthread_mutex_unlock( &global_var_mutex );
+    printf("------------  Resume  -----------\n");
+
+}
+
+
+//output user's current param to file 
+int outputFile(char *path){
+
+	FILE *fptr;
+    fptr = fopen(path,"w");
+    //output time in file
+	time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    
+    printf("Output Path is %s\n", path);
+
+	if(fptr == NULL)
+	{
+	   printf("Error with writing! Invalid Path\n");   
+	   return 0;             
+	}
+    fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tm.tm_year-100, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+    fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\nOffset: \n%lf",global_frequency, global_amplitude, global_offset);
+	fclose(fptr);
+    printf("SAVED!\n");
+	return 1;
 }
