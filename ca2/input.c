@@ -18,6 +18,7 @@
 #include "input.h"
 #include "Global.h"
 
+bool info_switch_prev;
 bool waveform;
 bool fo;
 uintptr_t dio_result;
@@ -80,8 +81,8 @@ void pci_setup(){
 	  }				
 }
 
-void dio_setup(uint8_t ctlreg){
-	out8(DIO_CTLREG,ctlreg);		//Digital CTLREG
+void dio_setup(){
+	out8(DIO_CTLREG,0x90);		//Digital CTLREG
 	out8(DIO_PORTB,0x00);			//clear LED
 }
 
@@ -111,51 +112,54 @@ void led(uint16_t lvl){
 	else {out8(DIO_PORTB,0x0f);}					// >49151
 }
 
-int read_input(){
+void read_input(){
   pthread_sigmask(SIG_SIG_SETMASK,&signal_mask,NULL);
-  pthread_mutex_lock(&global_var_mutex);
-  dio_result = dio_read(DIO_PORTA);
-
-  if(dio_result & 0x08){
-  //kill_switch on
-  kill_switch = 1;
-  }
-  else{
-  //kill_switch off
-  kill_switch = 0;
-  }
-
-  if(dio_result & 0x04){
-  //square waveform
-  waveform = 1; w_source = "SQUARE";
-  }
-  else{
-  //sine waveform
-  waveform = 0; w_source = "SINE";
-  }
-
-  if(dio_result & 0x02){
-  //Analog switch 1 = offset
-  fo = 1;aio_source="offset";
-  }
-  else{
-  //Analog switch 1 = frequency
-  fo = 0;aio_source="frequency";
-  }
-
-  if(1-fo) global_frequency = aio_read(channel0);
-  else global_offset = aio_read(channel0);
-  global_amplitude = aio_read(channel1);
-  //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
-  pthread_mutex_lock(&print_mutex);
-  printf("[%6s] ",w_source);
-  if(af) printf("[%s]: %4d    ",aio_source,(unsigned int)global_amplitude>>8);
-  else printf("[%s] : %4d    ",aio_source,(unsigned int)global_frequency>>8);
-  printf("[offset]: %4d \n",(unsigned int)global_offset>>8);
-  pthread_mutex_unlock(&print_mutex);
+  pthread_mutex_lock(&global_stop_mutex);
+  info_switch_prev=info_switch;
+  pthread_mutex_unlock(&global_stop_mutex);
+  while(1){
+    pthread_mutex_lock(&global_var_mutex);
+    dio_result = dio_read(DIO_PORTA);
   
-  //update LED
-  led(global_amplitude);
-  pthread_mutex_unlock(&global_var_mutex);
-
+    //info switch toggle
+    pthread_mutex_lock(&global_stop_mutex);
+    if(info_switch!=info_switch_prev){
+      info_switch=!info_switch;
+      info_switch_prev=info_switch;
+    }
+    pthread_mutex_unlock(&global_stop_mutex);
+  
+    if(dio_result & 0x04){
+    //square waveform
+    waveform = 1; w_source = "SQUARE";
+    }
+    else{
+    //sine waveform
+    waveform = 0; w_source = "SINE";
+    }
+  
+    if(dio_result & 0x02){
+    //Analog switch 1 = offset
+    fo = 1;aio_source="offset";
+    }
+    else{
+    //Analog switch 1 = frequency
+    fo = 0;aio_source="frequency";
+    }
+  
+    if(1-fo) global_frequency = aio_read(channel0);
+    else global_offset = aio_read(channel0);
+    global_amplitude = aio_read(channel1);
+    pthread_mutex_unlock(&global_var_mutex);
+    //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
+    pthread_mutex_lock(&print_mutex);
+    printf("[%6s] ",w_source);
+    if(af) printf("[%s]: %4d    ",aio_source,(unsigned int)global_amplitude>>8);
+    else printf("[%s] : %4d    ",aio_source,(unsigned int)global_frequency>>8);
+    printf("[offset]: %4d \n",(unsigned int)global_offset>>8);
+    pthread_mutex_unlock(&print_mutex);
+    
+    //update LED
+    led(global_amplitude);
+  }
 }
