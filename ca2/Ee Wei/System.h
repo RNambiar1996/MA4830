@@ -19,9 +19,6 @@
 // system init
 int system_init(const char *D2A_port_selection, const char *file_param );
 
-// getline() function
-//int get_line(char **line_ptr, FILE *stream);
-
 // setup signal handling variables
 void signal_handling_setup();
 
@@ -30,7 +27,11 @@ void* hardware_handle_func(void*); // Nicholas
 void* output_osc_func(void*); // Rahul
 void save_state(const bool *save_param); // You Liang
 void  INThandler(int sig);
-int system_shutdown(const bool *save_param);
+void system_shutdown(const bool save_param);
+
+void flush_input();
+
+void print_info();
 
 //int system_shutdown(); // probably need arg
 

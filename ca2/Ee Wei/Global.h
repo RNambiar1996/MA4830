@@ -16,8 +16,8 @@
 //#include <atomic.h>
 
 #define DEFAULT_FREQUENCY 100
-#define DEFAULT_AMPLITUDE 10
-#define DEFAULT_OFFSET 1
+#define DEFAULT_AMPLITUDE  10
+#define DEFAULT_OFFSET      1
 
 extern uintptr_t iobase[6];
 extern double global_frequency;
@@ -27,5 +27,9 @@ extern bool kill_switch;
 extern bool waveform;
 extern bool reuse_param;
 extern sigset_t all_sig_mask_set;
+
+extern pthread_mutex_t print_mutex;
+extern pthread_mutex_t global_var_mutex;
+extern pthread_mutex_t global_stop_mutex;
 
 #endif
