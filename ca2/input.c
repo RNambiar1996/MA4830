@@ -148,6 +148,7 @@ int read_input(){
   if(1-fo) global_frequency = aio_read(channel0);
   else global_offset = aio_read(channel0);
   global_amplitude = aio_read(channel1);
+  pthread_mutex_unlock(&global_var_mutex);
   //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
   pthread_mutex_lock(&print_mutex);
   printf("[%6s] ",w_source);
@@ -158,6 +159,5 @@ int read_input(){
   
   //update LED
   led(global_amplitude);
-  pthread_mutex_unlock(&global_var_mutex);
 
 }
