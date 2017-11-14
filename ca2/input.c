@@ -117,13 +117,15 @@ int read_input(){
   dio_result = dio_read(DIO_PORTA);
 
   if(dio_result & 0x08){
-  //kill_switch on
-  kill_switch = 1;
+  pthread_mutex_lock(&global_stop_mutex);
+  //info_switch on
+  info_switch = 1;
   }
   else{
-  //kill_switch off
-  kill_switch = 0;
+  //info_switch off
+  info_switch = 0;
   }
+  pthread_mutex_unlock(&global_stop_mutex);
 
   if(dio_result & 0x04){
   //square waveform
