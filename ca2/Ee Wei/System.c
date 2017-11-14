@@ -182,7 +182,7 @@ void* hardware_handle_func(void* arg)
 }
 void* output_osc_func(void* arg)
 {
-
+	
 }
 
 void save_state(const bool *save_param)

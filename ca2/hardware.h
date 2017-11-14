@@ -1,3 +1,17 @@
+#ifndef HARDWARE_H_
+#define HARDWARE_H_
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <hw/pci.h>
+#include <hw/inout.h>
+#include <sys/neutrino.h>
+#include <sys/mman.h>
+
+#define PI 3.14159
+
+
 #define	INTERRUPT		iobase[1] + 0				// Badr1 + 0 : also ADC register
 #define	MUXCHAN			iobase[1] + 2				// Badr1 + 2
 #define	TRIGGER			iobase[1] + 4				// Badr1 + 4
@@ -25,5 +39,27 @@
 
 #define	DEBUG			0
 
-extern uintptr_t iobase[6];
+#define MAX_AMP 		255
 
+
+//variables to move to global.h
+extern uintptr_t iobase[6];
+extern int badr[5];															// PCI 2.2 assigns 6 IO base addresses
+extern struct pci_dev_info info;
+extern void *hdl;
+
+
+void pci_setup();
+
+void dio_setup();
+
+uintptr_t dio_read(uintptr_t dio_port);
+
+uint16_t aio_read(uint16_t channel);
+
+void read_input();
+
+void generateWave(int);
+
+
+#endif
