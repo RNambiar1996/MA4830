@@ -120,7 +120,8 @@ void generateWave(int resolution)
 		T = T*1000.00;
 		printf("T: %f\n", T);
 		delta_t = (T)/((float)resolution);
-		t_delta.tv_nsec = 1000;
+		t_delta.tv_sec = 0;
+		t_delta.tv_nsec = delta_t*1000000;
 		printf("delta_t: %f\n", delta_t);
 		printf("nsec: %ld\n", t_delta.tv_nsec);
 
