@@ -81,7 +81,7 @@ void *generateWave()
 		{
 			out16(DA_CTLREG,0x0a23);						
 		   	out16(DA_FIFOCLR, 0);							
-		    	out16(DA_Data,(short) data[i]);																												
+		    out16(DA_Data,(short) data[i]);																												
 		  	nanospin(&t_delta);
 
 			++i;

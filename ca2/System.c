@@ -39,7 +39,7 @@ bool waveform;
 bool system_pause;
 bool reuse_param;          // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
 sigset_t all_sig_mask_set; // set of signals to block all signals for all except 1 thread, the 1 thread will do signal handling
-char *outputPath = "./output.txt";
+
 
 // Mutexes
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;       // for printing to terminal screen
@@ -203,22 +203,6 @@ void system_shutdown()
 {
     void *status;
 
-    // if (!reuse_param)
-    //     save_state(save_param);
-
-    // wait for threads to join
-    // if( pthread_join(oscilloscope_thread_handle, NULL) ) // returns 0 on success
-    // {
-    //     perror("pthread_join for oscilloscope_thread_handle");
-    //     exit(EXIT_FAILURE);
-    // }
-    // if( pthread_join(hardware_thread_handle, NULL) ) // returns 0 on success
-    // {
-    //     perror("pthread_join for hardware_thread_handle");
-    //     exit(EXIT_FAILURE);
-    // }
-    
-    // initiating all threads shutdown
     pthread_mutex_lock( &global_stop_mutex );
     kill_switch = true;
     pthread_mutex_unlock( &global_stop_mutex );
@@ -252,56 +236,18 @@ void INThandler(int sig) // handles SIGINT
     pthread_mutex_lock( &print_mutex );
 
     system_shutdown();
-    //char c[32];
-
-    // get global var and lock mutex
-    //pthread_mutex_lock( &global_var_mutex );
-
-    // pthread_mutex_lock( &global_stop_mutex );
-    // system_pause = true;
-    // pthread_mutex_unlock( &global_stop_mutex );
-
-    // printf("\n---------- HI, did you hit \"ctrl + c\"? ----------\n");
-
-    // print_info();
-
-    // scanf("%s" , c);
-
-    // if ( !strcmp(c, "q") || !strcmp(c, "Q") )
-    // {
-    //     printf("Exiting program!\n");
-    //     exit(0);
-    // }
-    // else if( !strcmp(c, "s") || !strcmp(c, "S") )
-    // {
-    //     printf("Saving param!\n");
-    //     if ( !outputFile(outputPath) )
-    //     {
-    //         printf("OUTPUT PARAM FAILED!!\n");
-    //     }
-    // }
-    // else
-    // {
-    //     printf("No valid input, Continue process\n");
-    //     signal(SIGINT, INThandler);
-    // }
-
-    // pthread_mutex_unlock( &global_var_mutex );
-    // printf("----------  Resuming  ----------\n");
 }
 
 //output user's current param to file 
 int outputFile(const char *path){
+    char *outputPath = "./output.txt";
 
 	FILE *fptr;
     fptr = fopen(path, "w");
     //output time in file
-	//timer_t rawtime;
-    //struct tm * timeinfo;
-    
-    //time(&rawtime);
+    time_t time = time(NULL);
+    struct tm tm = *localtime(&time);
   
-    
     printf("Output Path is %s\n", path);
 
 	if(fptr == NULL)
@@ -309,7 +255,7 @@ int outputFile(const char *path){
 	   printf("Error with writing! Invalid Path\n");   
 	   return 0;             
 	}
-    //fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tm.tm_year-100, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+    fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tm.tm_year-100, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min);
     fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\nOffset: \n%lf",global_frequency, global_amplitude, global_offset);
 	fclose(fptr);
     printf("File saved!\n");
@@ -338,6 +284,15 @@ void print_info()
     //     system_pause = true;
     //     pthread_mutex_unlock( &global_stop_mutex );
     // }
+    printf("      __________                                                  _ _                   \n");
+    printf("    /           \\                                               |   |                   \n");
+    printf("   /     ________|                                               |   |                     \n");
+    printf("  |     /                             _______     _____       __/    |   ________             \n");
+    printf("  |    |      ____    _________      /   _____|  /  __  \\  //  __   |  /   ____  \\             \n");
+    printf("  |    |     /_    \\ |         |   |   /       |  |  |  |  |  |  |  |  |  |___|  |                 \n");
+    printf("  |    \\______|   |  |_________|   |   |       |  |  |  |  |  |  |  |  |    _____/               \n");
+    printf("  \\               |                |   \\___   |   --   |  |   \\/   |  \\  \\____                  \n");
+    printf("    \\____________/                  \\_______|  \\_____/    \\_____/    \\_______|                \n");
 
     printf("  -Instructions:\n");
     printf("    -Toggle switches(from left to right):\n");
