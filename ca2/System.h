@@ -3,21 +3,17 @@
 #ifndef _SYSTEM_H_
 #define _SYSTEM_H_
 
-// #include <string.h>
-// #include <stdlib.h>
-// #include <stdint.h>
 #include <stdbool.h>
-
-// #include <sys/types.h>
-// #include <sys/stat.h>
-// #include <fcntl.h>
-// #include <unistd.h>
-// #include <signal.h>
-// #include <errno.h>
-// #include <pthread.h>
+#include <string.h>
 
 // system init
-int system_init(const char *file_param );
+int system_init(const char *file_param);
+
+// for parsing calibration flag
+void parse_calibration_flag(const char *calib_arg);
+
+// for arg parsing error
+void print_arg_parse_error();
 
 // setup signal handling variables
 void signal_handling_setup();

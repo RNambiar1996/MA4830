@@ -1,26 +1,27 @@
 /*
  * Group members: Tan You Liang, Nicholas Adrian, Rahul Nambiar, Lee Ee Wei
  * Maintainer of "Main.c": Lee Ee Wei
- * Compile line: gcc -o The_G_Code Main.c System.c -pthread -std=c11
- * (might work without -std=c11)
+ * Compile line: gcc -o The_G_Code Main.c System.c
  * 
- * Justification for use of atomic
- * https://stackoverflow.com/questions/15056237/which-is-more-efficient-basic-mutex-lock-or-atomic-integer
  */
 
 #include "Global.h"
 #include "System.h"
-#include <string.h>
 
 int main(int argc, char *argv[])
 {
-    // Check arguments
-    if( argc != 2 ) // Make sure only 1 argument , otherwise show message and exit
-    {
-        printf("Please enter only 1 argument in the following format:\n");
-        printf("Arg: [0 to use analog/digital inputs, or path of parameter file, to reuse old parameters]\n");
-        return 0;
-    }
+    // check arguments
+	// this part is coded in this way because checking for arguments that are not there will raise segmentation fault
+    if (argc != 2 && argc != 3)	// check that arg count is either 2 or 3
+		print_arg_parse_error();
+	else if (argc == 2 && strcmp(argv[1], "0")) // 
+		print_arg_parse_error();
+	else if (argc == 3 && (!strcmp(argv[1], "0") || (strcmp(argv[2], "0") && strcmp(argv[2], "1")) ) )
+		print_arg_parse_error();
+
+    // the alternative to this would be to overload system_init(), but system_init(), is quite a long function
+    if (argc == 3)
+        parse_calibration_flag(argv[2]);
 
     // initialize system and threads
     if ( system_init(argv[1]) == -1 )
@@ -31,8 +32,6 @@ int main(int argc, char *argv[])
 
     print_info();
 
-    signal(SIGINT, INThandler); // catch SIGINT
-    
     // spin main thread
     while(1)
     {
