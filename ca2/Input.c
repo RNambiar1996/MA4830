@@ -1,11 +1,5 @@
 /*
-[X] read digital input switch 1: killswitch
-[X] read digital input switch 2: sine vs square waveform
-[X] read analog input switch 1: amplitude/frequency value
-[X] read analog input switch 2: offset value
-[X] rescaled analog uint16 bit to uint8 bit
-[X] update LED
-[X] implement global_var_mutex and print_mutex
+Maintainer	: Nicholas Adrian
 */
 #include "Global.h"
 #include <stdio.h>
@@ -121,6 +115,8 @@ void *read_input(){
   info_switch_prev=info_switch;
   pthread_mutex_unlock(&global_stop_mutex);
   printf("Before read_input while loop\n");
+  uint8_t f_prev=0;
+  uint8_t a_prev=0;
   while(1){
   	delay(1);
     pthread_mutex_lock(&global_var_mutex);
@@ -142,28 +138,25 @@ void *read_input(){
     waveform = 0; w_source = "SINE";
     }
   
-    if(dio_result & 0x02){
-    //Analog switch 1 = offset
-    fo = 1;aio_source="offset";
-    }
-    else{
-    //Analog switch 1 = frequency
-    fo = 0;aio_source="frequency";
-    }
+    //if(dio_result & 0x02){
+    ////Read Analog switch 1 for frequency
+    //fo = 1;aio_source="offset";
+    //}
   
-    if(1-fo) {global_frequency = aio_read(channel0);
-    printf("g_Frequency value ready\n");}
-    else {global_offset = aio_read(channel0); printf("g_offset value ready\n");}
-    global_amplitude = aio_read(channel1);
+    //if(dio_result & 0x01){
+    ////Read Analog switch 2 for amplitude
+    //fo = 1;aio_source="offset";
+    //}
+
+    global_frequency = aio_read(channel0)>>8;
+    global_amplitude = aio_read(channel1)>>8;
+    if(abs(global_frequency-f_prev)>1 | abs(global_amplitude-a_prev)>1) var_update=1; 
+    hardware_ready = 1;
     pthread_mutex_unlock(&global_var_mutex);
-    printf("after global var mutex unlock\n");
     //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
     pthread_mutex_lock(&print_mutex);
-    printf("after print mutex lock\n");
-    printf("[%6s] ",w_source);
-    if(fo) printf("[%s]: %4d    ",aio_source,(unsigned int)global_amplitude>>8);
-    else printf("[%s] : %4d    ",aio_source,(unsigned int)global_frequency>>8);
-    printf("[offset]: %4d \n",(unsigned int)global_offset>>8);
+    printf("[frequency]: %4d     ",(unsigned int)global_frequency>>8);
+    printf("[amplitude]: %4d \n",(unsigned int)global_amplitude>>8);
     pthread_mutex_unlock(&print_mutex);
     
     //update LED
