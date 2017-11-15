@@ -2,7 +2,7 @@
 
 #include "Global.h"
 #include "System.h"
-#include "hardware.h"
+//#include "hardware.h"
 
 //#define _GNU_SOURCE
 //#define _XOPEN_SOURCE 700
@@ -22,50 +22,58 @@
 #include <errno.h>
 #include <pthread.h>
 #include <time.h>
-
+/*
 // Declaration of global variables for all source codes
 uintptr_t iobase[6];     // for hardware
 struct pci_dev_info info;
 void *hdl;
 int badr[5];
-
+*/
+// under global_var_mutex
 double global_frequency;
 double global_amplitude;
-double var_update;
+bool var_update;
+bool waveform;
+bool calibration_done;
 
+// under global_stop_mutex
 bool kill_switch;
 bool info_switch;
-bool waveform;
 bool system_pause;
+
 bool reuse_param;          // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
 sigset_t all_sig_mask_set; // set of signals to block all signals for all except 1 thread, the 1 thread will do signal handling
 char *outputPath = "./output.txt";
 
 // Mutexes
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;       // for printing to terminal screen
-pthread_mutex_t global_var_mutex = PTHREAD_MUTEX_INITIALIZER;  // for global frequency, amplitude, offset
+pthread_mutex_t global_var_mutex = PTHREAD_MUTEX_INITIALIZER;  // for global frequency, amplitude, var_update, waveform, calibration_done
 pthread_mutex_t global_stop_mutex = PTHREAD_MUTEX_INITIALIZER; // for kill_switch, info_switch, system_pause
 
-// To keep track of thread ids, and for joining when terminating threads
+// To keep track of thread, for joining when terminating threads
 pthread_t oscilloscope_thread_handle; // output to oscilloscope thread
 pthread_t hardware_thread_handle;     // handles analog/digital hardware
 
 // global variable for only this source code
-bool first_info; // boolean for printing info for the first time
-bool info_switch_prev; // for debounce
+bool first_info;               // boolean for printing info for the first time
+bool info_switch_prev;         // for debounce
+bool calibration_flag = false; // to check whether user wants to calibrate potentiometer
 
-int system_init(const char *file_param )
+int system_init(const char *file_param)
 {
+    // local variables
+    bool calibrate;
+
     // Variables to read file_param
-    FILE *fp;                  // file pointer
+    FILE *fp;            // file pointer
     char str_buffer[64];
-    char *temp_str;            // temp string variable to help parse file
-    int line_length = 0;        // size of line
-    int count;                 // for loop counter
+    char *temp_str;      // temp string variable to help parse file
+    int line_length = 0; // size of line
+    int count;           // for loop counter
+
     // Just to make it a little bit more robust, instead of assuming they are in order
-    const char *freq_str   = "Frequency: ";
-    const char *amp_str    = "Amplitude: ";
-    const char *offset_str = "Offset: ";
+    const char *freq_str = "Frequency: ";
+    const char *amp_str  = "Amplitude: ";
 
     // pthread attribute
     pthread_attr_t joinable_attr;
@@ -88,7 +96,7 @@ int system_init(const char *file_param )
         // malloc to temp string pointer
         temp_str = (char *) malloc(64);
 
-        for ( count = 0; count < 4; ++count ) // 1 info line + 3 variables
+        for ( count = 0; count < 3; ++count ) // 1 info line + 2 variables
         {
             // get entire line first
             while( (str_buffer[line_length] = getc(fp)) != '\n' )
@@ -106,12 +114,6 @@ int system_init(const char *file_param )
                 strncpy( temp_str, &str_buffer[strlen(amp_str)], (line_length - strlen(amp_str)) ); // get value
                 global_amplitude = strtod( temp_str, NULL); // set value
             }
-            else if ( !strncmp(str_buffer, offset_str, strlen(offset_str) ) )
-            {
-                memset( temp_str, '\0', sizeof(temp_str)); // clear string
-                strncpy( temp_str, &str_buffer[strlen(offset_str)], (line_length - strlen(offset_str)) ); // get value
-                global_offset = strtod( temp_str, NULL); // set value
-            }
 
             // clear string buffer, and line length variables
             memset(str_buffer, 0, sizeof(str_buffer));
@@ -125,13 +127,12 @@ int system_init(const char *file_param )
     {
         reuse_param = false;
 
-        // set default global values
+        // change when done, should be set by Nicholas
         global_frequency = DEFAULT_FREQUENCY;
         global_amplitude = DEFAULT_AMPLITUDE;
-        global_offset    = DEFAULT_OFFSET;
     }
 
-    // setup signal handling mask set
+    // setup signal handling
     signal_handling_setup();
 
     // init hardware
@@ -151,19 +152,24 @@ int system_init(const char *file_param )
     }
 
     // Spawn all wanted threads
-    if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
+    //if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
+    if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &hardware_handle_func, NULL ) ) // returns 0 on success
     {
         perror("pthread_create for output_osc_func");
         exit(EXIT_FAILURE);
     }
-    if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_input, NULL ) ) // returns 0 on success
+
+    // include convar for Nicholas thread
+
+    //if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_input, NULL ) ) // returns 0 on success
+    if( pthread_create( &hardware_thread_handle, &joinable_attr, &output_osc_func, NULL ) ) // returns 0 on success
     {
         perror("pthread_create for hardware_handle_func");
         exit(EXIT_FAILURE);
     }
 
     // Mask all signals
-    //pthread_sigmask (SIG_SETMASK, &signal_mask, NULL);
+    //pthread_sigmask (SIG_SETMASK, &all_sig_mask_set, NULL);
 
     // Destroys pthread attribute object before leaving this function
     if( pthread_attr_destroy(&joinable_attr) ) // returns 0 on success
@@ -175,6 +181,19 @@ int system_init(const char *file_param )
     return 0; // successfully init all threads
 }
 
+void parse_calibration_flag(const char *calib_arg)
+{
+    calibration_flag = strcmp(calib_arg, "0");
+}
+
+void print_arg_parse_error()
+{
+	printf("Please enter only up to 2 arguments in the following format:\n");
+	printf("Arg1: [0 to use analog/digital inputs, or path of parameter file, to reuse old parameters]\n");
+	printf("Arg2: [1 to undergo calibration procedure for potentiometer if Arg1 is not 0]\n");
+	printf("If Arg1 is 0, Arg2 is not needed.\n");
+}
+
 void signal_handling_setup()
 {
     // empty the signal set first
@@ -182,6 +201,8 @@ void signal_handling_setup()
 
     // Mask all signals, since 1 thread is dedicated to handle signals
     sigfillset (&all_sig_mask_set); //sigdelset() use this in the sig handle thread
+
+    signal(SIGINT, INThandler); // main thread catches SIGINT
 }
 
 void* hardware_handle_func(void* arg)
@@ -202,21 +223,6 @@ void save_state(const bool *save_param)
 void system_shutdown()
 {
     void *status;
-
-    // if (!reuse_param)
-    //     save_state(save_param);
-
-    // wait for threads to join
-    // if( pthread_join(oscilloscope_thread_handle, NULL) ) // returns 0 on success
-    // {
-    //     perror("pthread_join for oscilloscope_thread_handle");
-    //     exit(EXIT_FAILURE);
-    // }
-    // if( pthread_join(hardware_thread_handle, NULL) ) // returns 0 on success
-    // {
-    //     perror("pthread_join for hardware_thread_handle");
-    //     exit(EXIT_FAILURE);
-    // }
     
     // initiating all threads shutdown
     pthread_mutex_lock( &global_stop_mutex );
@@ -252,42 +258,6 @@ void INThandler(int sig) // handles SIGINT
     pthread_mutex_lock( &print_mutex );
 
     system_shutdown();
-    //char c[32];
-
-    // get global var and lock mutex
-    //pthread_mutex_lock( &global_var_mutex );
-
-    // pthread_mutex_lock( &global_stop_mutex );
-    // system_pause = true;
-    // pthread_mutex_unlock( &global_stop_mutex );
-
-    // printf("\n---------- HI, did you hit \"ctrl + c\"? ----------\n");
-
-    // print_info();
-
-    // scanf("%s" , c);
-
-    // if ( !strcmp(c, "q") || !strcmp(c, "Q") )
-    // {
-    //     printf("Exiting program!\n");
-    //     exit(0);
-    // }
-    // else if( !strcmp(c, "s") || !strcmp(c, "S") )
-    // {
-    //     printf("Saving param!\n");
-    //     if ( !outputFile(outputPath) )
-    //     {
-    //         printf("OUTPUT PARAM FAILED!!\n");
-    //     }
-    // }
-    // else
-    // {
-    //     printf("No valid input, Continue process\n");
-    //     signal(SIGINT, INThandler);
-    // }
-
-    // pthread_mutex_unlock( &global_var_mutex );
-    // printf("----------  Resuming  ----------\n");
 }
 
 //output user's current param to file 
@@ -332,13 +302,6 @@ void print_info()
     if ( first_info )
         printf("---------- Welcome! This program outputs waveform to the oscilloscope. ----------\n\n");
 
-    // if ( !first_info ) // if first_info == false, means all threads are initialized
-    // { 
-    //     pthread_mutex_lock( &global_stop_mutex );
-    //     system_pause = true;
-    //     pthread_mutex_unlock( &global_stop_mutex );
-    // }
-
     printf("  -Instructions:\n");
     printf("    -Toggle switches(from left to right):\n");
     printf("       a. info switch      (toggling it will display instructions)\n");
@@ -359,7 +322,6 @@ void print_info()
         // current values, no need mutex, system_pause == true will stop writing of these
         printf("  Current frequency: %lf\n", global_frequency);
         printf("  Current amplitude: %lf\n", global_amplitude);
-        printf("  Current offset: %lf\n\n", global_offset);
 
         // save instructions/info
         printf("Enter 's' to save, 'q' to quit!, other inputs to continue\n");
