@@ -223,12 +223,8 @@ void save_state(const bool *save_param)
 void system_shutdown()
 {
     void *status;
-<<<<<<< HEAD
-
-=======
     
     // initiating all threads shutdown
->>>>>>> 2ab76caff9353afcb92faf6c4cf54b8d13b9dc0d
     pthread_mutex_lock( &global_stop_mutex );
     kill_switch = true;
     pthread_mutex_unlock( &global_stop_mutex );
