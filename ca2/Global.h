@@ -12,17 +12,24 @@
 // #include <unistd.h>
 #include <signal.h>
 // #include <errno.h>
-// #include <pthread.h>
+#include <pthread.h>
 //#include <atomic.h>
+#include <stdint.h>
 
 #define DEFAULT_FREQUENCY 100
 #define DEFAULT_AMPLITUDE  10
 #define DEFAULT_OFFSET      1
 
+extern int badr[5];
 extern uintptr_t iobase[6];
+extern struct pci_dev_info info;
+extern void *hdl;
+
 extern double global_frequency;
 extern double global_amplitude;
 extern double global_offset;
+extern bool var_update;
+
 extern bool kill_switch;
 extern bool info_switch;
 extern bool waveform;

@@ -8,6 +8,9 @@
 #include <hw/inout.h>
 #include <sys/neutrino.h>
 #include <sys/mman.h>
+#include <math.h>
+#include <stdbool.h>
+#include <signal.h>
 
 #define PI 3.14159
 
@@ -43,10 +46,10 @@
 
 
 //variables to move to global.h
-extern uintptr_t iobase[6];
-extern int badr[5];															// PCI 2.2 assigns 6 IO base addresses
-extern struct pci_dev_info info;
-extern void *hdl;
+//extern uintptr_t iobase[6];
+//extern int badr[5];															// PCI 2.2 assigns 6 IO base addresses
+//extern struct pci_dev_info info;
+//extern void *hdl;
 
 
 void pci_setup();
@@ -57,9 +60,9 @@ uintptr_t dio_read(uintptr_t dio_port);
 
 uint16_t aio_read(uint16_t channel);
 
-void read_input();
+void *read_input();
 
-void generateWave(int);
+void *generateWave();
 
 
 #endif

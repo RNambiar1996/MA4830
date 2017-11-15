@@ -14,18 +14,16 @@
 
 int main(int argc, char *argv[])
 {
-    // Parse arguments
-    if( argc != 3 ||                                      // Make sure only 2 arguments , otherwise show message and exit
-        (strcmp(argv[1], "0") && strcmp(argv[1], "1")) )  // Check that Arg 1 is either '0' or '1'
+    // Check arguments
+    if( argc != 2 ) // Make sure only 1 argument , otherwise show message and exit
     {
-        printf("Please enter only up to 2 arguments in the following format:\n");
-        printf("Arg 1: [0 or 1, D/A port selection]\n");
-        printf("Arg 2: [0 to use analog/digital inputs, or path of parameter file, to reuse old parameters]\n");
+        printf("Please enter only 1 argument in the following format:\n");
+        printf("Arg: [0 to use analog/digital inputs, or path of parameter file, to reuse old parameters]\n");
         return 0;
     }
 
     // initialize system and threads
-    if ( system_init(argv[1], argv[2]) == -1 )
+    if ( system_init(argv[1]) == -1 )
     {
         printf("Path of parameter file is invalid. Please enter a valid path if you would like to reuse old parameters.\n");
         return 0;
@@ -33,11 +31,14 @@ int main(int argc, char *argv[])
 
     print_info();
 
-    signal(SIGINT, INThandler); // catched ctrl - c
+    signal(SIGINT, INThandler); // catch SIGINT
     
     // spin main thread
     while(1)
-        pause();
+    {
+    	delay(1);
+    	check_info_switch();
+    }  
 
     return 0;
 }

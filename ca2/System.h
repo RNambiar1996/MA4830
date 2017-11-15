@@ -17,7 +17,7 @@
 // #include <pthread.h>
 
 // system init
-int system_init(const char *D2A_port_selection, const char *file_param );
+int system_init(const char *file_param );
 
 // setup signal handling variables
 void signal_handling_setup();

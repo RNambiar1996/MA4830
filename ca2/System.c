@@ -25,9 +25,14 @@
 
 // Declaration of global variables for all source codes
 uintptr_t iobase[6];     // for hardware
+struct pci_dev_info info;
+void *hdl;
+int badr[5];
+
 double global_frequency;
 double global_amplitude;
-double global_offset;
+double var_update;
+
 bool kill_switch;
 bool info_switch;
 bool waveform;
@@ -49,7 +54,7 @@ pthread_t hardware_thread_handle;     // handles analog/digital hardware
 bool first_info; // boolean for printing info for the first time
 bool info_switch_prev; // for debounce
 
-int system_init(const char *D2A_port_selection, const char *file_param )
+int system_init(const char *file_param )
 {
     // Variables to read file_param
     FILE *fp;                  // file pointer
@@ -146,7 +151,7 @@ int system_init(const char *D2A_port_selection, const char *file_param )
     }
 
     // Spawn all wanted threads
-    if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generate_wave, NULL ) ) // returns 0 on success
+    if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
     {
         perror("pthread_create for output_osc_func");
         exit(EXIT_FAILURE);
@@ -158,7 +163,7 @@ int system_init(const char *D2A_port_selection, const char *file_param )
     }
 
     // Mask all signals
-    //pthread_sigmask (SIG_SIG_SETMASK, &signal_mask, NULL);
+    //pthread_sigmask (SIG_SETMASK, &signal_mask, NULL);
 
     // Destroys pthread attribute object before leaving this function
     if( pthread_attr_destroy(&joinable_attr) ) // returns 0 on success
@@ -196,7 +201,7 @@ void save_state(const bool *save_param)
 // basically just wait all threads to join, and check whether to save the param
 void system_shutdown()
 {
-    int *status;
+    void *status;
 
     // if (!reuse_param)
     //     save_state(save_param);
@@ -291,8 +296,11 @@ int outputFile(const char *path){
 	FILE *fptr;
     fptr = fopen(path, "w");
     //output time in file
-	time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
+	//timer_t rawtime;
+    //struct tm * timeinfo;
+    
+    //time(&rawtime);
+  
     
     printf("Output Path is %s\n", path);
 
@@ -301,7 +309,7 @@ int outputFile(const char *path){
 	   printf("Error with writing! Invalid Path\n");   
 	   return 0;             
 	}
-    fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tm.tm_year-100, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+    //fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tm.tm_year-100, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min);
     fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\nOffset: \n%lf",global_frequency, global_amplitude, global_offset);
 	fclose(fptr);
     printf("File saved!\n");

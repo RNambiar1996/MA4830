@@ -7,16 +7,16 @@
 [X] update LED
 [X] implement global_var_mutex and print_mutex
 */
+#include "Global.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include <hw/pci.h>
 #include <hw/inout.h>
 #include <sys/neutrino.h>
 #include <sys/mman.h>
-//#include "hardware.h"
-#include "input.h"
-#include "Global.h"
+#include "hardware.h"
 
 bool info_switch_prev;
 bool waveform;
@@ -29,6 +29,7 @@ uint16_t channel0 = 0x00;
 uint16_t channel1 = 0x01;
 
 void pci_setup(){
+	int i;
 	uintptr_t iobase[6];
 	struct pci_dev_info info;
 	void *hdl;
@@ -97,10 +98,12 @@ uint16_t aio_read(uint16_t channel){
 
 	out16(AD_FIFOCLR,0);
 	out16(MUXCHAN,0x0D00|channel);
-	delay(1);
+	//delay(1);
 
 	out16(AD_DATA,0);
-	while(!(in16(MUXCHAN) & 0x4000));
+	printf("before while muxchan\n");
+	//while(!(in16(MUXCHAN) & 0x4000));
+	printf("after while muxchan\n");
 	return in16(AD_DATA);
 }
 
@@ -112,12 +115,14 @@ void led(uint16_t lvl){
 	else {out8(DIO_PORTB,0x0f);}					// >49151
 }
 
-void read_input(){
-  pthread_sigmask(SIG_SIG_SETMASK,&signal_mask,NULL);
+void *read_input(){
+  pthread_sigmask(SIG_SETMASK, &all_sig_mask_set, NULL);
   pthread_mutex_lock(&global_stop_mutex);
   info_switch_prev=info_switch;
   pthread_mutex_unlock(&global_stop_mutex);
+  printf("Before read_input while loop\n");
   while(1){
+  	delay(1);
     pthread_mutex_lock(&global_var_mutex);
     dio_result = dio_read(DIO_PORTA);
   
@@ -127,8 +132,7 @@ void read_input(){
       info_switch=!info_switch;
       info_switch_prev=info_switch;
     }
-    pthread_mutex_unlock(&global_stop_mutex);
-  
+    pthread_mutex_unlock(&global_stop_mutex); 
     if(dio_result & 0x04){
     //square waveform
     waveform = 1; w_source = "SQUARE";
@@ -147,14 +151,17 @@ void read_input(){
     fo = 0;aio_source="frequency";
     }
   
-    if(1-fo) global_frequency = aio_read(channel0);
-    else global_offset = aio_read(channel0);
+    if(1-fo) {global_frequency = aio_read(channel0);
+    printf("g_Frequency value ready\n");}
+    else {global_offset = aio_read(channel0); printf("g_offset value ready\n");}
     global_amplitude = aio_read(channel1);
     pthread_mutex_unlock(&global_var_mutex);
+    printf("after global var mutex unlock\n");
     //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
     pthread_mutex_lock(&print_mutex);
+    printf("after print mutex lock\n");
     printf("[%6s] ",w_source);
-    if(af) printf("[%s]: %4d    ",aio_source,(unsigned int)global_amplitude>>8);
+    if(fo) printf("[%s]: %4d    ",aio_source,(unsigned int)global_amplitude>>8);
     else printf("[%s] : %4d    ",aio_source,(unsigned int)global_frequency>>8);
     printf("[offset]: %4d \n",(unsigned int)global_offset>>8);
     pthread_mutex_unlock(&print_mutex);
