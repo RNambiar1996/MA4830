@@ -100,9 +100,9 @@ void printCurrent()
         else if (local_frequency == 255)
             real_frequency = FREQUENCY_MAX;
         else
-            real_frequency = local_frequency/255 * FREQUENCY_MAX;
+            real_frequency = local_frequency/255.0 * FREQUENCY_MAX;
 
-        real_amplitude = real_amplitude/255 * AMPLITUDE_MAX;
+        real_amplitude = local_amplitude/255.0 * AMPLITUDE_MAX;
 
         pthread_mutex_lock(&print_mutex);
         //printf("\n\n\n");
