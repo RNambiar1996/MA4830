@@ -2,6 +2,10 @@
 #include "Global.h"
 #include "System.h"
 
+double local_frequency;
+double local_amplitude;
+
+
 void printInit(){
     printf("---------- Welcome! This program outputs waveform to the oscilloscope. ----------\n\n");
     printf("      __________                                                  _ _                   \n");
@@ -63,4 +67,11 @@ void printSave(){ // display save instructions and current value info
     pthread_mutex_unlock( &global_stop_mutex );
     printf("----------  Resuming The G Code ----------\n");
     sleep(1);//delay(1000); // stop 1 second to display the previous line's printf()
+}
+
+void printCurrent(){
+    ptr
+    local_amplitude = global_amplitude;
+    local_frequency = global_frequency;
+
 }

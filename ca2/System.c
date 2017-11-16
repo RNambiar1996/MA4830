@@ -55,7 +55,6 @@ pthread_t oscilloscope_thread_handle; // output to oscilloscope thread
 pthread_t hardware_thread_handle;     // handles analog/digital hardware
 
 // global variable for only this source code
-bool first_info;               // boolean for printing info for the first time
 bool info_switch_prev;         // for debounce
 bool calibration_flag = false; // to check whether user wants to calibrate potentiometer
 
@@ -82,7 +81,7 @@ int system_init(const char *file_param)
 
     // initializations
     kill_switch = false;  // for ctrl + c
-    first_info = true;    // check whether info is printed for the first time, if yes, do not display save instructions and etc
+    // first_info = true;    // check whether info is printed for the first time, if yes, do not display save instructions and etc
     waveform = 0;         // waveform defaults to 0, which is sine wave
     info_switch = 0;      // for info toggle switch
     info_switch_prev = 0; // for debounce
@@ -136,7 +135,6 @@ int system_init(const char *file_param)
 
     // setup signal handling
     signal_handling_setup();
-    printf("jibai4");
 
     // init hardware
     // pci_setup();youliang
@@ -300,13 +298,9 @@ void print_info()
     // flush_input();   // so that "press any key to continue..." below works
     // system("clear"); // clears the screen
     
-    if ( first_info ){
-
-        printInit();
-        printf("Press any key to begin...\n");
-        first_info = false;
-        getc(stdin);
-    }
+    printInit();
+    printf("Press any key to begin...\n");
+    getc(stdin);
 }
 
 
