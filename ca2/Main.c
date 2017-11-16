@@ -36,7 +36,8 @@ int main(int argc, char *argv[])
     // spin main thread
     while(1)
     {
-        check_info_switch(); //check info switch to prompt saving and/or quit, 
+        check_info_switch(); //check info switch to prompt saving and/or quit,
+        printCurrent(); //print current frequency and amplitude 
         sleep(1);  //change to milisecond later
     }  
 
