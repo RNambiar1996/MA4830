@@ -67,12 +67,6 @@ void pci_setup(){
 	  if(DEBUG) printf("Index %d : Address : %x ", i,badr[i]);
 	  if(DEBUG) printf("IOBASE  : %x \n",iobase[i]);
 	  }													
-	
-	  if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
-	  perror("Thread Control");
-	  exit(1);
-  	}														// Modify thread control privity
-			
 }
 
 void dio_setup(){
@@ -118,10 +112,14 @@ void *read_input(){
   pthread_mutex_lock(&global_stop_mutex);
   info_switch_prev=info_switch;
   pthread_mutex_unlock(&global_stop_mutex);
-  //pthread_mutex_lock(&global_var_mutex);
-  f_prev = aio_read(channel0)>>8; ;
-  a_prev =  aio_read(channel1)>>8;;
-  //pthread_mutex_unlock(&global_var_mutex);
+  pthread_mutex_lock(&global_var_mutex);
+  global_frequency = aio_read(channel0)>>8;
+  global_amplitude = aio_read(channel1)>>8;
+  f_prev = global_frequency;
+  a_prev =  global_amplitude;
+  hardware_ready = true;
+  pthread_cond_signal(&hardware_ready_cond);
+  pthread_mutex_unlock(&global_var_mutex);
   //printf("Before read_input while loop\n");
   while(1){
   	delay(1);
@@ -157,7 +155,6 @@ void *read_input(){
     global_frequency = aio_read(channel0)>>8;
     amp = aio_read(channel1);
     global_amplitude = amp>>8;
-    hardware_ready = 1;
     if(abs(global_frequency-f_prev)>2 || abs(global_amplitude-a_prev)>2) {var_update=1; printf("nic var update\n");} 
     pthread_mutex_unlock(&global_var_mutex);
     //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
@@ -168,5 +165,16 @@ void *read_input(){
     
     //update LED
     led(amp);
+
+    //check kill_switch and exit cleanly
+    //if(pthread_mutex_trylock(&global_stop_mutex)==0){
+    pthread_mutex_lock(&global_stop_mutex);
+    if(kill_switch){
+      //printf("kill_switch\n");
+      pthread_mutex_unlock(&global_stop_mutex);
+      //printf("KILLING");
+      return;}
+    else {pthread_mutex_unlock(&global_stop_mutex);}
+    //}
   }
 }
