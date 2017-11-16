@@ -23,6 +23,7 @@ void* hardware_handle_func(void*); // Nicholas
 void* output_osc_func(void*); // Rahul
 void save_state(const bool *save_param); // You Liang
 void INThandler(int sig);
+void INThandler2(int sig);
 void system_shutdown();
 
 int outputFile(const char *path);
@@ -32,5 +33,10 @@ void flush_input();
 void print_info();
 
 void check_info_switch();
+
+
+//printout
+void printInit();
+void printSave();
 
 #endif

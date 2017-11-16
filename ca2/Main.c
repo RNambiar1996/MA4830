@@ -31,12 +31,13 @@ int main(int argc, char *argv[])
     }
 
     print_info();
-
+    printf("---------- Process Officially Starts!!!---------\n");
+    
     // spin main thread
     while(1)
     {
-    	delay(1);
-    	check_info_switch();
+        check_info_switch(); //check info switch to prompt saving and/or quit, 
+        sleep(1);  //change to milisecond later
     }  
 
     return 0;

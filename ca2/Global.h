@@ -23,6 +23,7 @@ extern bool calibration_done; // only in use if user wants to calibrate
 // under global_stop_mutex
 extern bool kill_switch;
 extern bool info_switch;
+extern bool system_pause;
 
 // mutexes
 extern pthread_mutex_t print_mutex;
