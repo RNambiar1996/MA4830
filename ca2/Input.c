@@ -106,6 +106,10 @@ void led(uint16_t lvl){
 void *read_input(){
   bool waveform_prev;
 
+  //init hardware
+  pci_setup();
+  dio_setup();
+
   pthread_sigmask(SIG_SETMASK, &all_sig_mask_set, NULL);
   //acquire permission to resources
   if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
@@ -151,14 +155,15 @@ void *read_input(){
     }
     pthread_mutex_unlock(&global_stop_mutex); 
 
+    //ADC read
+    freq = aio_read(channel0);
+    amp = aio_read(channel1);
+
     pthread_mutex_lock(&global_var_mutex);
     if(dio_result & 0x04) waveform=1;		//square waveform
     else waveform=0;				//sine waveform
     wavef=waveform;
 
-    //ADC read
-    freq = aio_read(channel0);
-    amp = aio_read(channel1);
     //global variables are scaled to 8 bits by keeping the 8 MSB
     global_frequency = freq>>8;
     global_amplitude = amp>>8;
