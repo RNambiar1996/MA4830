@@ -3,6 +3,8 @@
 
 double local_frequency;
 double local_amplitude;
+double previous_local_frequency;
+double previous_local_amplitude;
 
 
 void printInit(){
@@ -67,8 +69,21 @@ void printSave(){ // display save instructions and current value info
 }
 
 void printCurrent(){
-    ptr
+
+
+    pthread_mutex_lock(&global_var_mutex);
     local_amplitude = global_amplitude;
     local_frequency = global_frequency;
+    pthread_mutex_unlock(&global_var_mutex);
 
+    if(abs(local_frequency-previous_local_frequency)>1e-6 || abs(local_frequency-previous_local_frequency)>1e-6){ //global var changed
+        pthread_mutex_lock(&print_mutex);
+        printf("\33[1A"); //move cursor up
+        printf("%c[1K", 27); //clear line
+        printf("\33[1A"); //move cursor up
+        printf("%c[1K", 27); //clear line
+        printf("  Current frequency: %lf\n", local_frequency);
+        printf("  Current amplitude: %lf\n", local_amplitude);
+        pthread_mutex_unlock(&print_mutex);
+    }
 }
