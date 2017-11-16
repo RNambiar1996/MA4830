@@ -13,15 +13,12 @@ Maintainer	: Nicholas Adrian
 #include "hardware.h"
 
 bool info_switch_prev;
+bool wavef;
+uint16_t freq;
 uint16_t amp;
-//bool waveform;
-//bool fo;
-uintptr_t dio_result;
-char* w_source;
-char* aio_source;
 uint8_t f_prev;
 uint8_t a_prev;
-
+uintptr_t dio_result;
 uint16_t channel0 = 0x00;
 uint16_t channel1 = 0x01;
 
@@ -67,11 +64,15 @@ void pci_setup(){
 	  if(DEBUG) printf("Index %d : Address : %x ", i,badr[i]);
 	  if(DEBUG) printf("IOBASE  : %x \n",iobase[i]);
 	  }													
+        if(ThreadCtl(_NTO_TCTL_IO,0)==1){
+        perror("Thread Control");
+        exit(1);
+        }
 }
 
 void dio_setup(){
 	out8(DIO_CTLREG,0x90);		//Digital CTLREG
-	out8(DIO_PORTB,0x00);			//clear LED
+	out8(DIO_PORTB,0x00);		//clear LED
 }
 
 uintptr_t dio_read(uintptr_t dio_port){
@@ -103,78 +104,84 @@ void led(uint16_t lvl){
 }
 
 void *read_input(){
+  bool waveform_prev;
 
   pthread_sigmask(SIG_SETMASK, &all_sig_mask_set, NULL);
+  //acquire permission to resources
   if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
 	  perror("Thread Control");
 	  exit(1);
   }	
-  pthread_mutex_lock(&global_stop_mutex);
-  info_switch_prev=info_switch;
-  pthread_mutex_unlock(&global_stop_mutex);
+
+  //initialization to indicate hardware readiness
   pthread_mutex_lock(&global_var_mutex);
-  global_frequency = aio_read(channel0)>>8;
-  global_amplitude = aio_read(channel1)>>8;
+  freq = aio_read(channel0);
+  amp = aio_read(channel1);
+  global_frequency = freq>>8;
+  global_amplitude = amp>>8;
   f_prev = global_frequency;
   a_prev =  global_amplitude;
+  dio_result = dio_read(DIO_PORTA);
+  if(dio_result & 0x08) info_switch=1;
+  else info_switch=0;
+  if(dio_result & 0x04) waveform=1;		//square waveform
+  else waveform=0;				//sine waveform
+  waveform_prev=waveform;
   hardware_ready = true;
   pthread_cond_signal(&hardware_ready_cond);
   pthread_mutex_unlock(&global_var_mutex);
-  //printf("Before read_input while loop\n");
+
+  //for debouncing info_switch
+  pthread_mutex_lock(&global_stop_mutex);
+  info_switch_prev=info_switch;
+  pthread_mutex_unlock(&global_stop_mutex);
+
   while(1){
-  	delay(1);
-    pthread_mutex_lock(&global_var_mutex);
+    delay(1);
     dio_result = dio_read(DIO_PORTA);
   
     //info switch toggle
     pthread_mutex_lock(&global_stop_mutex);
+    if(dio_result & 0x08) info_switch=1;
+    else info_switch=0;
+
     if(info_switch!=info_switch_prev){
       info_switch=!info_switch;
       info_switch_prev=info_switch;
     }
     pthread_mutex_unlock(&global_stop_mutex); 
-    if(dio_result & 0x04){
-    //square waveform
-    waveform = 1; w_source = "SQUARE";
-    }
-    else{
-    //sine waveform
-    waveform = 0; w_source = "SINE";
-    }
-  
-    //if(dio_result & 0x02){
-    ////Read Analog switch 1 for frequency
-    //fo = 1;aio_source="offset";
-    //}
-  
-    //if(dio_result & 0x01){
-    ////Read Analog switch 2 for amplitude
-    //fo = 1;aio_source="offset";
-    //}
 
-    global_frequency = aio_read(channel0)>>8;
+    pthread_mutex_lock(&global_var_mutex);
+    if(dio_result & 0x04) waveform=1;		//square waveform
+    else waveform=0;				//sine waveform
+    wavef=waveform;
+
+    //ADC read
+    freq = aio_read(channel0);
     amp = aio_read(channel1);
+    //global variables are scaled to 8 bits by keeping the 8 MSB
+    global_frequency = freq>>8;
     global_amplitude = amp>>8;
-    if(abs(global_frequency-f_prev)>2 || abs(global_amplitude-a_prev)>2) {var_update=1; printf("nic var update\n");} 
     pthread_mutex_unlock(&global_var_mutex);
-    //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
-    pthread_mutex_lock(&print_mutex);
-    printf("[frequency]: %4d     ",(unsigned int)global_frequency);
-    printf("[amplitude]: %4d \n",(unsigned int)global_amplitude);
-    pthread_mutex_unlock(&print_mutex);
+
+    //check for any update in ADC value
+    if(abs((freq>>8)-f_prev)>2 || abs((amp>>8)-a_prev)>2 || (waveform_prev!=wavef)){
+      var_update=1; waveform_prev=wavef;} 
+
+    //pthread_mutex_lock(&print_mutex);
+    //printf("[frequency]: %4d     ",(unsigned int)global_frequency);
+    //printf("[amplitude]: %4d \n",(unsigned int)global_amplitude);
+    //pthread_mutex_unlock(&print_mutex);
     
     //update LED
     led(amp);
 
     //check kill_switch and exit cleanly
-    //if(pthread_mutex_trylock(&global_stop_mutex)==0){
-    pthread_mutex_lock(&global_stop_mutex);
+    if(pthread_mutex_trylock(&global_stop_mutex)==0){
     if(kill_switch){
-      //printf("kill_switch\n");
       pthread_mutex_unlock(&global_stop_mutex);
-      //printf("KILLING");
       return;}
     else {pthread_mutex_unlock(&global_stop_mutex);}
-    //}
+    }
   }
 }
