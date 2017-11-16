@@ -2,7 +2,7 @@
 
 #include "Global.h"
 #include "System.h"
-//#include "hardware.h"
+#include "hardware.h"
 
 //#define _GNU_SOURCE
 //#define _XOPEN_SOURCE 700
@@ -22,19 +22,20 @@
 #include <errno.h>
 #include <pthread.h>
 #include <time.h>
-/*
+
 // Declaration of global variables for all source codes
 uintptr_t iobase[6];     // for hardware
 struct pci_dev_info info;
 void *hdl;
 int badr[5];
-*/
+
 // under global_var_mutex
 double global_frequency;
 double global_amplitude;
-bool var_update;
-bool waveform;
+bool var_update = 0;
+bool waveform = 0;
 bool calibration_done;
+bool hardware_ready;
 
 // under global_stop_mutex
 bool kill_switch;
@@ -127,16 +128,16 @@ int system_init(const char *file_param)
         reuse_param = false;
 
         // change when done, should be set by Nicholas
-        global_frequency = DEFAULT_FREQUENCY;
-        global_amplitude = DEFAULT_AMPLITUDE;
+        global_frequency = 1000;//DEFAULT_FREQUENCY;
+        global_amplitude = 200;DEFAULT_AMPLITUDE;
     }
 
     // setup signal handling
     signal_handling_setup();
 
     // init hardware
-    // pci_setup();youliang
-    // dio_setup();youliang
+    pci_setup();
+    dio_setup();
 
     // init and set pthread attributes to be joinable
     if( pthread_attr_init(&joinable_attr) ) // returns 0 on success
@@ -151,21 +152,21 @@ int system_init(const char *file_param)
     }
 
     // Spawn all wanted threads
-    //if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
-    if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &hardware_handle_func, NULL ) ) // returns 0 on success
-    {
-        perror("pthread_create for output_osc_func");
-        exit(EXIT_FAILURE);
-    }
-
-    // include convar for Nicholas thread to sync
-
-    //if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_input, NULL ) ) // returns 0 on success
-    if( pthread_create( &hardware_thread_handle, &joinable_attr, &output_osc_func, NULL ) ) // returns 0 on success
+    if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_input, NULL ) ) // returns 0 on success
+    //if( pthread_create( &hardware_thread_handle, &joinable_attr, &output_osc_func, NULL ) ) // returns 0 on success
     {
         perror("pthread_create for hardware_handle_func");
         exit(EXIT_FAILURE);
     }
+    
+    // include convar for Nicholas thread to sync
+    
+    if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
+    //if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &hardware_handle_func, NULL ) ) // returns 0 on success
+    {
+        perror("pthread_create for output_osc_func");
+        exit(EXIT_FAILURE);
+    } 
 
     // Mask all signals (This is only for child threads as main thread catches SIGINT)
     //pthread_sigmask (SIG_SETMASK, &all_sig_mask_set, NULL);
@@ -282,13 +283,13 @@ void INThandler(int sig) // handles SIGINT
 
 //output user's current param to file 
 int outputFile(const char *path){
-    
+    time_t Time = time(NULL);
+    struct tm tme = *localtime(&Time);
+      
 	FILE *fptr;
     fptr = fopen(path, "w");
     //output time in file
-    time_t Time = time(NULL);
-    struct tm tm = *localtime(&Time);
-  
+    
     printf("Output Path is %s\n", path);
 
 	if(fptr == NULL)
@@ -296,7 +297,7 @@ int outputFile(const char *path){
 	   printf("Error with writing! Invalid Path\n");   
 	   return 0;             
 	}
-    fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tm.tm_year-100, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+    fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tme.tm_year-100, tme.tm_mon+1, tme.tm_mday, tme.tm_hour, tme.tm_min);
     fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\n",global_frequency, global_amplitude);
 	fclose(fptr);
     printf("File saved!\n");

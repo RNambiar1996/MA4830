@@ -77,7 +77,7 @@ void printCurrent(){
 
     if(abs(local_frequency-previous_local_frequency)>1e-6 || abs(local_frequency-previous_local_frequency)>1e-6){ //global var changed
         pthread_mutex_lock(&print_mutex);
-        printf("\n\n\n");
+        //printf("\n\n\n");
         printf("\33[1A"); //move cursor up
         printf("%c[1K", 27); //clear line
         printf("\33[1A"); //move cursor up

@@ -40,16 +40,11 @@
 #define DA_Data			iobase[4] + 0				// Badr4 + 0
 #define DA_FIFOCLR		iobase[4] + 2				// Badr4 + 2
 
-#define	DEBUG			0
+#define	DEBUG			1
 
 #define MAX_AMP 		255
 
 
-//variables to move to global.h
-//extern uintptr_t iobase[6];
-//extern int badr[5];															// PCI 2.2 assigns 6 IO base addresses
-//extern struct pci_dev_info info;
-//extern void *hdl;
 
 
 void pci_setup();

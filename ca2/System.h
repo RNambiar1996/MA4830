@@ -38,5 +38,6 @@ void check_info_switch();
 //printout
 void printInit();
 void printSave();
+void printCurrent();
 
 #endif

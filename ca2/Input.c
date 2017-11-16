@@ -13,21 +13,20 @@ Maintainer	: Nicholas Adrian
 #include "hardware.h"
 
 bool info_switch_prev;
-bool waveform;
-bool fo;
+uint16_t amp;
+//bool waveform;
+//bool fo;
 uintptr_t dio_result;
 char* w_source;
 char* aio_source;
+uint8_t f_prev;
+uint8_t a_prev;
 
 uint16_t channel0 = 0x00;
 uint16_t channel1 = 0x01;
 
 void pci_setup(){
 	int i;
-	uintptr_t iobase[6];
-	struct pci_dev_info info;
-	void *hdl;
-	
 	memset(&info,0,sizeof(info));
 	if(pci_attach(0)<0) {
 	  perror("pci_attach");
@@ -69,11 +68,11 @@ void pci_setup(){
 	  if(DEBUG) printf("IOBASE  : %x \n",iobase[i]);
 	  }													
 	
-															// Modify thread control privity
-	if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
+	  if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
 	  perror("Thread Control");
 	  exit(1);
-	  }				
+  	}														// Modify thread control privity
+			
 }
 
 void dio_setup(){
@@ -95,9 +94,9 @@ uint16_t aio_read(uint16_t channel){
 	//delay(1);
 
 	out16(AD_DATA,0);
-	printf("before while muxchan\n");
+	//printf("before while muxchan\n");
 	//while(!(in16(MUXCHAN) & 0x4000));
-	printf("after while muxchan\n");
+	//printf("after while muxchan\n");
 	return in16(AD_DATA);
 }
 
@@ -110,13 +109,20 @@ void led(uint16_t lvl){
 }
 
 void *read_input(){
+
   pthread_sigmask(SIG_SETMASK, &all_sig_mask_set, NULL);
+  if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
+	  perror("Thread Control");
+	  exit(1);
+  }	
   pthread_mutex_lock(&global_stop_mutex);
   info_switch_prev=info_switch;
   pthread_mutex_unlock(&global_stop_mutex);
-  printf("Before read_input while loop\n");
-  uint8_t f_prev=0;
-  uint8_t a_prev=0;
+  //pthread_mutex_lock(&global_var_mutex);
+  f_prev = aio_read(channel0)>>8; ;
+  a_prev =  aio_read(channel1)>>8;;
+  //pthread_mutex_unlock(&global_var_mutex);
+  //printf("Before read_input while loop\n");
   while(1){
   	delay(1);
     pthread_mutex_lock(&global_var_mutex);
@@ -149,17 +155,18 @@ void *read_input(){
     //}
 
     global_frequency = aio_read(channel0)>>8;
-    global_amplitude = aio_read(channel1)>>8;
-    if(abs(global_frequency-f_prev)>1 | abs(global_amplitude-a_prev)>1) var_update=1; 
+    amp = aio_read(channel1);
+    global_amplitude = amp>>8;
     hardware_ready = 1;
+    if(abs(global_frequency-f_prev)>2 || abs(global_amplitude-a_prev)>2) {var_update=1; printf("nic var update\n");} 
     pthread_mutex_unlock(&global_var_mutex);
     //print value to screen | analog values are scaled to 8 bits by keeping the 8 MSB
     pthread_mutex_lock(&print_mutex);
-    printf("[frequency]: %4d     ",(unsigned int)global_frequency>>8);
-    printf("[amplitude]: %4d \n",(unsigned int)global_amplitude>>8);
+    printf("[frequency]: %4d     ",(unsigned int)global_frequency);
+    printf("[amplitude]: %4d \n",(unsigned int)global_amplitude);
     pthread_mutex_unlock(&print_mutex);
     
     //update LED
-    led(global_amplitude);
+    led(amp);
   }
 }
