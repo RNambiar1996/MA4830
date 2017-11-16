@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 	else if (argc == 3 && (!strcmp(argv[1], "0") || (strcmp(argv[2], "0") && strcmp(argv[2], "1")) ) )
 		print_arg_parse_error();
 
-    // the alternative to this would be to overload system_init(), but system_init(), is quite a long function
+    // parse calibration flag if available
     if (argc == 3)
         parse_calibration_flag(argv[2]);
 
@@ -30,15 +30,15 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    print_info();
+    printInit();
     printf("---------- Process Officially Starts!!!---------\n");
     
     // spin main thread
     while(1)
     {
         check_info_switch(); //check info switch to prompt saving and/or quit,
-        printCurrent(); //print current frequency and amplitude 
-        sleep(1);  //change to milisecond later
+        printCurrent();      //print current frequency and amplitude 
+        sleep(1);            //change to 1 milisecond in QNX
     }  
 
     return 0;

@@ -55,6 +55,9 @@ pthread_mutex_t global_stop_mutex = PTHREAD_MUTEX_INITIALIZER; // for kill_switc
 pthread_t oscilloscope_thread_handle; // output to oscilloscope thread
 pthread_t hardware_thread_handle;     // handles analog/digital hardware
 
+// Convar to synchronise hardware and system, make sure hardware is ready before spawning oscilloscope output
+pthread_cond_t hardware_ready_cond = PTHREAD_COND_INITIALIZER;
+
 // global variable for only this source code
 bool info_switch_prev;         // for debounce
 bool calibration_flag = false; // to check whether user wants to calibrate potentiometer
@@ -155,23 +158,33 @@ int system_init(const char *file_param)
     if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_input, NULL ) ) // returns 0 on success
     //if( pthread_create( &hardware_thread_handle, &joinable_attr, &output_osc_func, NULL ) ) // returns 0 on success
     {
-        perror("pthread_create for hardware_handle_func");
+        perror("pthread_create for read_input thread");
         exit(EXIT_FAILURE);
     }
     
-    // include convar for Nicholas thread to sync
+    // convar to make sure frequency and amplitude has been mapped to current potentiometer value
+    pthread_mutex_lock(&global_var_mutex);
+    while( hardware_ready == false ) pthread_cond_wait( &hardware_ready_cond, &global_var_mutex );
+    pthread_mutex_unlock(&global_var_mutex);
     
     if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
     //if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &hardware_handle_func, NULL ) ) // returns 0 on success
     {
-        perror("pthread_create for output_osc_func");
+        perror("pthread_create for generateWave thread");
         exit(EXIT_FAILURE);
     } 
 
     // Mask all signals (This is only for child threads as main thread catches SIGINT)
     //pthread_sigmask (SIG_SETMASK, &all_sig_mask_set, NULL);
 
-    // Destroys pthread attribute object before leaving this function
+    // Destroys pthread convar object before leaving this function, not needed after this
+    if( pthread_cond_destroy(&hardware_ready_cond) ) // returns 0 on success
+    {
+        perror("pthread_cond_destroy for hardware_ready_cond");
+        exit(EXIT_FAILURE);
+    }
+
+    // Destroys pthread attribute object before leaving this function, not needed after this
     if( pthread_attr_destroy(&joinable_attr) ) // returns 0 on success
     {
         perror("pthread_attr_destroy");
@@ -201,7 +214,7 @@ void signal_handling_setup()
     sigemptyset(&all_sig_mask_set);
 
     // Mask all signals, since 1 thread is dedicated to handle signals
-    sigfillset (&all_sig_mask_set); //sigdelset() use this in the sig handle thread
+    sigfillset (&all_sig_mask_set);
 
     signal(SIGINT, INThandler); // main thread catches SIGINT
 }
@@ -275,53 +288,57 @@ void INThandler(int sig) // handles SIGINT
     // alerts ctrl+c detection to user
     pthread_mutex_lock( &print_mutex );
     printf("\"ctrl+c\" detected, ending program\n");
-    // pthread_mutex_lock( &print_mutex );
+    pthread_mutex_unlock( &print_mutex );
 
     system_shutdown();
 }
 
-
 //output user's current param to file 
-int outputFile(const char *path){
+int outputFile(){
+    //for output of time in file
     time_t Time = time(NULL);
     struct tm tme = *localtime(&Time);
+    char *path = "./output.txt";
       
 	FILE *fptr;
     fptr = fopen(path, "w");
-    //output time in file
     
-    printf("Output Path is %s\n", path);
-
-	if(fptr == NULL)
+	if( fptr == NULL )
 	{
-	   printf("Error with writing! Invalid Path\n");   
-	   return 0;             
+        pthread_mutex_lock( &print_mutex );
+        printf("Error with writing! Invalid Path\n");
+        pthread_mutex_unlock( &print_mutex );
+        return 0;
 	}
+
     fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tme.tm_year-100, tme.tm_mon+1, tme.tm_mday, tme.tm_hour, tme.tm_min);
     fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\n",global_frequency, global_amplitude);
 	fclose(fptr);
+
+    pthread_mutex_lock( &print_mutex );
+    printf("Output Path is %s\n", path);
     printf("File saved!\n");
+    pthread_mutex_unlock( &print_mutex );
+
 	return 1;
 }
 
 void flush_input()
 {
-  char flush_ch;
-  while ( (flush_ch = getchar()) != '\n' && flush_ch != EOF );
+    char flush_ch;
+    while ( (flush_ch = getchar()) != '\n' && flush_ch != EOF );
 }
 
 void print_info()
 {   
-    char input[32];
+    //char input[32];
     // flush_input();   // so that "press any key to continue..." below works
     // system("clear"); // clears the screen
     
     printInit();
-    printf("Press any key to begin...\n");
-    getc(stdin);
+    //printf("Press any key to begin...\n");
+    //getc(stdin);
 }
-
-
 
 void check_info_switch()
 {
@@ -335,7 +352,6 @@ void check_info_switch()
 
     pthread_mutex_unlock( &global_stop_mutex );
 
-    if ( system_pause ){ // no need mutex, only main thread writes to system_pause variable
+    if ( system_pause ) // no need mutex, only main thread writes to system_pause variable
         printSave();
-    }
 }

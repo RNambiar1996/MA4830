@@ -31,6 +31,9 @@ extern pthread_mutex_t print_mutex;
 extern pthread_mutex_t global_var_mutex;
 extern pthread_mutex_t global_stop_mutex;
 
+// convar
+extern pthread_cond_t hardware_ready_cond;
+
 // for hardware
 extern int badr[5];
 extern uintptr_t iobase[6];

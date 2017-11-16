@@ -36,36 +36,52 @@ void printInit(){
 
 void printSave(){ // display save instructions and current value info
     char input[8];
-    char *outputPath = "./output.txt";
     
     // current values, no need mutex, system_pause == true will stop writing of these
-    printf("  Current frequency: %lf\n", global_frequency);
-    printf("  Current amplitude: %lf\n", global_amplitude);
+    //printf("  Current frequency: %lf\n", global_frequency);
+    //printf("  Current amplitude: %lf\n", global_amplitude);
     // save instructions/info
+    pthread_mutex_lock( &print_mutex );
     printf("Enter 's' to save, 'q' to quit!, other inputs to continue\n");
+    pthread_mutex_unlock( &print_mutex );
     scanf("%[^\n]s", input);
     if ( !strcmp(input, "q") || !strcmp(input, "Q") )
     {
+        pthread_mutex_lock( &print_mutex );
         printf("Shutting down program!\n");
+        pthread_mutex_unlock( &print_mutex );
         system_shutdown();
     }
     else if( !strcmp(input, "s") || !strcmp(input, "S") )
     {
-        printf("Saving param!\n");
-        if ( !outputFile(outputPath) )
+        pthread_mutex_lock( &print_mutex );
+        printf("Saving parameters!\n");
+        pthread_mutex_unlock( &print_mutex );
+
+        if ( !outputFile() )
         {
-            printf("OUTPUT PARAM FAILED!!\n");
+            pthread_mutex_lock( &print_mutex );
+            printf("Output failed!\n");
+            pthread_mutex_unlock( &print_mutex );
         }
+
     }
     else
     {
-        printf("Continuing program....\n");
+        pthread_mutex_lock( &print_mutex );
+        printf("Continuing program...\n");
+        pthread_mutex_unlock( &print_mutex );
     }
+
     pthread_mutex_lock( &global_stop_mutex );
     system_pause = false;
     pthread_mutex_unlock( &global_stop_mutex );
+    
+    pthread_mutex_lock(&print_mutex);
     printf("----------  Resuming The G Code ----------\n");
-    sleep(1);//delay(1000); // stop 1 second to display the previous line's printf()
+    pthread_mutex_unlock(&print_mutex);
+
+    sleep(1);//delay(1000); // stop 1 second to display the previous printf()
 }
 
 void printCurrent(){
@@ -75,15 +91,19 @@ void printCurrent(){
     local_frequency = global_frequency;
     pthread_mutex_unlock(&global_var_mutex);
 
-    if(abs(local_frequency-previous_local_frequency)>1e-6 || abs(local_frequency-previous_local_frequency)>1e-6){ //global var changed
+    //if global var changed, then reprint current value
+    if( abs(local_frequency-previous_local_frequency)>1e-6 || abs(local_frequency-previous_local_frequency)>1e-6 )
+    {
         pthread_mutex_lock(&print_mutex);
         //printf("\n\n\n");
-        printf("\33[1A"); //move cursor up
-        printf("%c[1K", 27); //clear line
-        printf("\33[1A"); //move cursor up
-        printf("%c[1K", 27); //clear line
+        printf("\33[1A");    //move cursor up 1 line
+        printf("%c[2K", 27); //clear entire line
+        printf("\33[1A");    //move cursor up 1 line
+        printf("%c[2K", 27); //clear entire line
+
         printf("  Current frequency: %lf\n", local_frequency);
         printf("  Current amplitude: %lf\n", local_amplitude);
+
         pthread_mutex_unlock(&print_mutex);
     }
 }
