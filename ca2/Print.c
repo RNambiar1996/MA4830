@@ -1,4 +1,3 @@
-#include <string.h>
 #include "Global.h"
 #include "System.h"
 
@@ -29,10 +28,8 @@ void printInit(){
     printf("    -After \"ctrl+c\" is detected, the hardware will stop updating the values.\n\n");
 }
 
-
-
 void printSave(){ // display save instructions and current value info
-    char input[10];
+    char input[8];
     char *outputPath = "./output.txt";
     
     // current values, no need mutex, system_pause == true will stop writing of these
