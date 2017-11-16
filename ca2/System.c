@@ -41,9 +41,9 @@ bool kill_switch;
 bool info_switch;
 bool system_pause;
 
+// shared across threads, but constant after system_init()
 bool reuse_param;          // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
 sigset_t all_sig_mask_set; // set of signals to block all signals for all except 1 thread, the 1 thread will do signal handling
-
 
 // Mutexes
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;       // for printing to terminal screen
@@ -57,8 +57,6 @@ pthread_t hardware_thread_handle;     // handles analog/digital hardware
 // global variable for only this source code
 bool info_switch_prev;         // for debounce
 bool calibration_flag = false; // to check whether user wants to calibrate potentiometer
-
-
 
 int system_init(const char *file_param)
 {
@@ -160,7 +158,7 @@ int system_init(const char *file_param)
         exit(EXIT_FAILURE);
     }
 
-    // include convar for Nicholas thread
+    // include convar for Nicholas thread to sync
 
     //if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_input, NULL ) ) // returns 0 on success
     if( pthread_create( &hardware_thread_handle, &joinable_attr, &output_osc_func, NULL ) ) // returns 0 on success
@@ -169,7 +167,7 @@ int system_init(const char *file_param)
         exit(EXIT_FAILURE);
     }
 
-    // Mask all signals
+    // Mask all signals (This is only for child threads as main thread catches SIGINT)
     //pthread_sigmask (SIG_SETMASK, &all_sig_mask_set, NULL);
 
     // Destroys pthread attribute object before leaving this function
@@ -200,7 +198,7 @@ void signal_handling_setup()
 {
     // empty the signal set first
     sigemptyset(&all_sig_mask_set);
-    printf("activate jibai");
+
     // Mask all signals, since 1 thread is dedicated to handle signals
     sigfillset (&all_sig_mask_set); //sigdelset() use this in the sig handle thread
 
@@ -243,6 +241,25 @@ void system_shutdown()
     if( pthread_join(hardware_thread_handle, &status) ) // returns 0 on success
     {
         printf("ERROR; return code from pthread_join() is %d\n", status);
+        exit(EXIT_FAILURE);
+    }
+
+    // destory all mutexes, all threads have joined, nobody is locking any mutex
+    if( pthread_mutex_destroy(&print_mutex) ) // returns 0 on success
+    {
+        printf("ERROR; return code from pthread_mutex_destroy is %d\n", status);
+        exit(EXIT_FAILURE);
+    }
+
+    if( pthread_mutex_destroy(&global_var_mutex) ) // returns 0 on success
+    {
+        printf("ERROR; return code from pthread_mutex_destroy is %d\n", status);
+        exit(EXIT_FAILURE);
+    }
+
+    if( pthread_mutex_destroy(&global_stop_mutex) ) // returns 0 on success
+    {
+        printf("ERROR; return code from pthread_mutex_destroy is %d\n", status);
         exit(EXIT_FAILURE);
     }
 
