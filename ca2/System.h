@@ -18,10 +18,9 @@ void print_arg_parse_error();
 // setup signal handling variables
 void signal_handling_setup();
 
-// remove when all is done by respective coder
-void* hardware_handle_func(void*); // Nicholas
-void* output_osc_func(void*); // Rahul
-void save_state(const bool *save_param); // You Liang
+// remove when final
+void* hardware_handle_func(void*);
+void* output_osc_func(void*);
 
 void INThandler(int sig);
 void system_shutdown();
@@ -29,9 +28,6 @@ void system_shutdown();
 int outputFile();
 
 void flush_input();
-
-// should be removed
-void print_info();
 
 void check_info_switch();
 

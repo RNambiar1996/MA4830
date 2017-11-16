@@ -4,11 +4,6 @@
 #include "System.h"
 #include "hardware.h"
 
-//#define _GNU_SOURCE
-//#define _XOPEN_SOURCE 700
-//#define _POSIX_C_SOURCE 200809L
-//#include <stdio.h>
-
 #include <string.h>
 #include <stdlib.h>
 // #include <stdint.h>
@@ -23,15 +18,9 @@
 #include <pthread.h>
 #include <time.h>
 
-// Declaration of global variables for all source codes
-uintptr_t iobase[6];     // for hardware
-struct pci_dev_info info;
-void *hdl;
-int badr[5];
-
 // under global_var_mutex
-double global_frequency;
-double global_amplitude;
+uint8_t global_frequency;
+uint8_t global_amplitude;
 bool var_update = 0;
 bool waveform = 0;
 bool calibration_done;
@@ -83,10 +72,7 @@ int system_init(const char *file_param)
 
     // initializations
     kill_switch = false;  // for ctrl + c
-    // first_info = true;    // check whether info is printed for the first time, if yes, do not display save instructions and etc
     waveform = 0;         // waveform defaults to 0, which is sine wave
-    info_switch = 0;      // for info toggle switch
-    info_switch_prev = 0; // for debounce
 
     // Check validity of file_param
     if ( strcmp(file_param, "0") ) // if file_param is not "0"
@@ -127,20 +113,10 @@ int system_init(const char *file_param)
         fclose(fp);         // close the stream, because we are good people
     }
     else // if file_param is "0"
-    {
         reuse_param = false;
-
-        // change when done, should be set by Nicholas
-        global_frequency = 1000;//DEFAULT_FREQUENCY;
-        global_amplitude = 200;DEFAULT_AMPLITUDE;
-    }
 
     // setup signal handling
     signal_handling_setup();
-
-    // init hardware
-    pci_setup();
-    dio_setup();
 
     // init and set pthread attributes to be joinable
     if( pthread_attr_init(&joinable_attr) ) // returns 0 on success
@@ -167,15 +143,17 @@ int system_init(const char *file_param)
     while( hardware_ready == false ) pthread_cond_wait( &hardware_ready_cond, &global_var_mutex );
     pthread_mutex_unlock(&global_var_mutex);
     
+    // get the current info_switch state (at this point, read_input() thread has updated it)
+    pthread_mutex_lock(&global_stop_mutex);
+    info_switch_prev = info_switch; // for debounce
+    pthread_mutex_lock(&global_stop_mutex);
+
     if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
     //if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &hardware_handle_func, NULL ) ) // returns 0 on success
     {
         perror("pthread_create for generateWave thread");
         exit(EXIT_FAILURE);
     } 
-
-    // Mask all signals (This is only for child threads as main thread catches SIGINT)
-    //pthread_sigmask (SIG_SETMASK, &all_sig_mask_set, NULL);
 
     // Destroys pthread convar object before leaving this function, not needed after this
     if( pthread_cond_destroy(&hardware_ready_cond) ) // returns 0 on success
@@ -226,11 +204,6 @@ void* hardware_handle_func(void* arg)
 void* output_osc_func(void* arg)
 {
 	
-}
-
-void save_state(const bool *save_param)
-{
-
 }
 
 // basically just wait all threads to join, and check whether to save the param
@@ -329,17 +302,6 @@ void flush_input()
     while ( (flush_ch = getchar()) != '\n' && flush_ch != EOF );
 }
 
-void print_info()
-{   
-    //char input[32];
-    // flush_input();   // so that "press any key to continue..." below works
-    // system("clear"); // clears the screen
-    
-    printInit();
-    //printf("Press any key to begin...\n");
-    //getc(stdin);
-}
-
 void check_info_switch()
 {
     pthread_mutex_lock( &global_stop_mutex );
@@ -352,6 +314,7 @@ void check_info_switch()
 
     pthread_mutex_unlock( &global_stop_mutex );
 
-    if ( system_pause ) // no need mutex, only main thread writes to system_pause variable
+    // no need mutex, only main thread writes to system_pause variable, and only main thread calls this function
+    if ( system_pause )
         printSave();
 }

@@ -10,12 +10,14 @@
 #include <pthread.h>
 #include <stdint.h>
 
-#define DEFAULT_FREQUENCY 100
-#define DEFAULT_AMPLITUDE  10
+#define FREQUENCY_MAX 1000.0
+#define FREQUENCY_MIN 0.1
+#define AMPLITUDE_MAX 5.0
+#define AMPLITUDE_MIN 0.0
 
 // under global_var_mutex
-extern double global_frequency;
-extern double global_amplitude;
+extern uint8_t global_frequency;
+extern uint8_t global_amplitude;
 extern bool var_update;
 extern bool waveform;
 extern bool calibration_done; // only in use if user wants to calibrate

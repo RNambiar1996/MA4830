@@ -1,50 +1,51 @@
 #include "Global.h"
 #include "System.h"
 
-double local_frequency;
-double local_amplitude;
-double previous_local_frequency;
-double previous_local_amplitude;
+// local relative to this source code
+uint8_t local_frequency;
+uint8_t local_amplitude;
+uint8_t previous_local_frequency;
+uint8_t previous_local_amplitude;
 
+// to store value after conversion
+double real_frequency;
+double real_amplitude;
 
 void printInit(){
-    printf("---------- Welcome! This program outputs waveform to the oscilloscope. ----------\n\n");
-    printf("      __________                                                  _ _                   \n");
-    printf("    /           \\                                               |   |                   \n");
-    printf("   /     ________|                                              |   |                     \n");
-    printf("  |     /                            ________    _____       __/    |   _________            \n");
-    printf("  |    |      ____    _________     /   _____|  /  __  \\   /  __    |  /   ____  \\             \n");
-    printf("  |    |    /_    \\  |         |   |   /       |  |  |  |  |  |  |  |  |  |___|  |                 \n");
-    printf("  |    \\______|   |  |_________|   |   |       |  |  |  |  |  |  |  |  |   ______/               \n");
-    printf("  \\               |                |   \\_____  |   --   |  |   \\/   |  \\  \\______           \n");
-    printf("    \\____________/                  \\________|  \\______/   \\_______/    \\________|          \n\n");
+    printf("---------- Welcome to the G-code. This program outputs waveform to the oscilloscope. ----------\n");
+    printf("       __________                                                  _ _  \n");
+    printf("     /           \\                                               |   | \n");
+    printf("    /     ________|                                              |   |  \n");
+    printf("   |     /                            ________    _____       __/    |  \n");
+    printf("   |    |      ____    _________     /   _____|  /  __  \\   /  __    |  /   ____  \\    \n");
+    printf("   |    |    /_    \\  |         |   |   /       |  |  |  |  |  |  |  |  |  |___|  |     \n");
+    printf("   |    \\______|   |  |_________|   |   |       |  |  |  |  |  |  |  |  |   ______/     \n");
+    printf("   \\               |                |   \\_____  |   --   |  |   \\/   |  \\  \\______  \n");
+    printf("     \\____________/                  \\________|  \\______/   \\_______/    \\________| \n\n");
     printf("  -Instructions:\n");
     printf("    -Toggle switches(from left to right):\n");
-    printf("       a. info switch      (toggling it will display instructions)\n");
-    printf("       b. waveform         (change between sine wave and square wave)\n");
-    printf("       c. frequency/offset (to choose the parameter for analog input a)\n");
+    printf("       a. pause switch (toggling it will pause the hardware input, and prompt user to save, quit or continue.)\n");
+    printf("       b. waveform     (change between sine wave and square wave)\n");
     printf("    -Analog input(from left to right):\n");
-    printf("       a. D/A 0            (changes frequency/offset depending on toggle switch c)\n");
-    printf("       b. D/A 1            (changes amplitude of wave)\n");
+    printf("       a. D/A 0        (changes frequency of wave)\n");
+    printf("       b. D/A 1        (changes amplitude of wave)\n");
+    printf("  -Other information:\n");
     printf("    -The program outputs to A/D 0 port.\n");
     printf("    -Number of LED lit up shows the amplitude level.\n");
-    printf("    -The program will update the terminal screen with the latest values of frequency, amplitude, and offset.\n");
-    printf("    -Instructions to save the parameters will be displayed after \"ctrl+c\" is entered.\n\n");
-    printf("    -If you would like to see the instructions again and/or save the parameter, please enter \"ctrl+c\"\n");
-    printf("    -After \"ctrl+c\" is detected, the hardware will stop updating the values.\n\n");
+    printf("    -The program will update the terminal screen with the latest values of frequency, and amplitude.\n");
+    printf("    -Toggle switch 'a' will not be available if parameters are loaded from a file.\n");
+    printf("    -After \"ctrl+c\" is detected, the program will shutdown all threads systematically.\n\n");
 }
 
 void printSave(){ // display save instructions and current value info
     char input[8];
     
-    // current values, no need mutex, system_pause == true will stop writing of these
-    //printf("  Current frequency: %lf\n", global_frequency);
-    //printf("  Current amplitude: %lf\n", global_amplitude);
     // save instructions/info
     pthread_mutex_lock( &print_mutex );
-    printf("Enter 's' to save, 'q' to quit!, other inputs to continue\n");
+    printf("Enter 's' to save, 'q' to quit, other enter to continue\n");
     pthread_mutex_unlock( &print_mutex );
     scanf("%[^\n]s", input);
+    
     if ( !strcmp(input, "q") || !strcmp(input, "Q") )
     {
         pthread_mutex_lock( &print_mutex );
@@ -84,16 +85,25 @@ void printSave(){ // display save instructions and current value info
     sleep(1);//delay(1000); // stop 1 second to display the previous printf()
 }
 
-void printCurrent(){
-
+void printCurrent()
+{
     pthread_mutex_lock(&global_var_mutex);
     local_amplitude = global_amplitude;
     local_frequency = global_frequency;
     pthread_mutex_unlock(&global_var_mutex);
 
     //if global var changed, then reprint current value
-    if( abs(local_frequency-previous_local_frequency)>1e-6 || abs(local_frequency-previous_local_frequency)>1e-6 )
+    if( (local_frequency-previous_local_frequency)>1 || (local_frequency-previous_local_frequency)>1 )
     {
+        if (local_frequency == 0)
+            real_frequency = FREQUENCY_MIN;
+        else if (local_frequency == 255)
+            real_frequency = FREQUENCY_MAX;
+        else
+            real_frequency = local_frequency/255 * FREQUENCY_MAX;
+
+        real_amplitude = real_amplitude/255 * AMPLITUDE_MAX;
+
         pthread_mutex_lock(&print_mutex);
         //printf("\n\n\n");
         printf("\33[1A");    //move cursor up 1 line
@@ -101,8 +111,8 @@ void printCurrent(){
         printf("\33[1A");    //move cursor up 1 line
         printf("%c[2K", 27); //clear entire line
 
-        printf("  Current frequency: %lf\n", local_frequency);
-        printf("  Current amplitude: %lf\n", local_amplitude);
+        printf("  Current frequency: %lf\n", real_frequency);
+        printf("  Current amplitude: %lf\n", real_amplitude);
 
         pthread_mutex_unlock(&print_mutex);
     }

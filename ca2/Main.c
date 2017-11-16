@@ -1,8 +1,14 @@
 /*
  * Group members: Tan You Liang, Nicholas Adrian, Rahul Nambiar, Lee Ee Wei
  * Maintainer of "Main.c": Lee Ee Wei
- * Compile line: gcc -o The_G_Code Main.c System.c
- * 
+ * Compile line(on QNX): cc -o The_G_Code Main.c System.c Print.c Input.c wave.c -lm
+ *  
+ * Note:
+ * - When done remove these from System.h and System.c
+ *      void* hardware_handle_func(void*);
+ *      void* output_osc_func(void*);
+ * - Change wave.c to Wave.c
+ * - Check which header files are not needed and remove, and try to only include C headers in our own header files instead of source code
  */
 
 #include "Global.h"
@@ -36,9 +42,10 @@ int main(int argc, char *argv[])
     // spin main thread
     while(1)
     {
-        check_info_switch(); //check info switch to prompt saving and/or quit,
-        printCurrent();      //print current frequency and amplitude 
-        sleep(1);            //change to 1 milisecond in QNX
+        if ( !reuse_param )
+            check_info_switch(); //check info switch to prompt saving and/or quit,
+        printCurrent();          //print current frequency and amplitude 
+        sleep(1);                //change to 1 milisecond in QNX
     }  
 
     return 0;
