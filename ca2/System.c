@@ -2,7 +2,7 @@
 
 #include "Global.h"
 #include "System.h"
-#include "hardware.h"
+#include "Hardware.h"
 
 #include <string.h>
 #include <stdlib.h>

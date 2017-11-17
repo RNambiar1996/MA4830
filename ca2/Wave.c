@@ -1,5 +1,5 @@
 #include "Global.h"
-#include "hardware.h"
+#include "Hardware.h"
 
 void *generateWave()
 {
