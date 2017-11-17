@@ -318,38 +318,6 @@ void INThandler(int sig) // handles SIGINT
     system_shutdown();
 }
 
-//output user's current param to file 
-int outputFile(){
-    //for output of time in file
-    time_t Time = time(NULL);
-    struct tm tme = *localtime(&Time);
-    char *path = "./output.txt";
-      
-	FILE *fptr;
-    fptr = fopen(path, "w");
-    
-	if( fptr == NULL )
-	{
-        pthread_mutex_lock( &print_mutex );
-        printf("Error with writing! Invalid Path\n");
-        pthread_mutex_unlock( &print_mutex );
-        return 0;
-	}
-
-    fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tme.tm_year-100, tme.tm_mon+1, tme.tm_mday, tme.tm_hour, tme.tm_min);
-    fprintf(fptr,"-Human readable form\nFrequency: %lfHz\nAmplitude: %lfV\n",global_frequency*FREQUENCY_MAX/255.0, global_amplitude*AMPLITUDE_MAX/255.0);
-    fprintf(fptr,"Waveform: %s\n-For program, value in 8 bits\n",waveform?"Square":"Sine");
-    fprintf(fptr,"Scaled Frequency: %d\nScaled Amplitude: %d",global_frequency, global_amplitude);
-	fclose(fptr);
-
-    pthread_mutex_lock( &print_mutex );
-    printf("Output Path is %s\n", path);
-    printf("File saved!\n");
-    pthread_mutex_unlock( &print_mutex );
-
-	return 1;
-}
-
 void flush_input()
 {
     char flush_ch;

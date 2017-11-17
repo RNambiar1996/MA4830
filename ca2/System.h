@@ -31,9 +31,10 @@ void flush_input();
 
 void check_info_switch();
 
-// Print.c
+//Within Print.c
 void printInit();
 void printSave();
 void printCurrent();
+void outputFile();
 
 #endif

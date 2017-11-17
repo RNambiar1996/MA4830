@@ -13,6 +13,7 @@ bool previous_local_waveform;
 double real_frequency;
 double real_amplitude;
 
+//print INitial lines
 void printInit(){
 	printf("\33[2J"); // clears screen
     printf("---------- Welcome to the G-code. This program outputs waveform to the oscilloscope. ----------\n");
@@ -41,7 +42,8 @@ void printInit(){
     printf("\n\n\n"); // for printSave(), so that the current values will remain even after pause
 }
 
-void printSave(){ // display save instructions and current value info
+// display save instructions and current value info
+void printSave(){ 
     char input[8];
 
 	int count, lines_to_remove = 0;
@@ -115,7 +117,8 @@ void printSave(){ // display save instructions and current value info
     pthread_mutex_unlock(&print_mutex);
 }
 
-void printCurrent()
+//print current frequency and amplitude on screen
+void printCurrent() 
 {
 	int count = 0;
 
@@ -136,7 +139,6 @@ void printCurrent()
         real_amplitude = local_amplitude/255.0 * AMPLITUDE_MAX;
 
         pthread_mutex_lock(&print_mutex);
-        //printf("\n\n\n\n\n");
 
     	for ( count = 0; count < 3; ++ count )
     	{
@@ -148,9 +150,6 @@ void printCurrent()
         printf("  Current amplitude : %lf\n", real_amplitude);
         printf("  Current waveform  : %s\n", local_waveform? "Square wave" : "Sine wave");
 
-        //printf("  real frequency: %d\n", local_frequency);
-        //printf("  real amplitude: %d\n", local_amplitude);
-
         pthread_mutex_unlock(&print_mutex);
         
 		previous_local_frequency = local_frequency;
@@ -159,24 +158,33 @@ void printCurrent()
     }
 }
 
-#/** PhEDIT attribute block
-#-11:16777215
-#0:2984:default:-3:-3:0
-#2984:3003:TextFont9:0:-1:0
-#3003:3004:FixedFont9:0:-1:0
-#3004:3115:TextFont9:0:-1:0
-#3115:4505:default:-3:-3:0
-#4505:4524:TextFont9:0:-1:0
-#4524:4526:FixedFont9:0:-1:0
-#4526:4754:TextFont9:0:-1:0
-#4754:5470:default:-3:-3:0
-#5470:5471:FixedFont9:-3:-3:0
-#5471:5577:TextFont9:-3:-3:0
-#5577:5596:TextFont9:0:-1:0
-#5596:5598:FixedFont9:0:-1:0
-#5598:5676:TextFont9:0:-1:0
-#5676:5812:TextFont9:-3:-3:0
-#5812:5894:TextFont9:0:-1:0
-#5894:6017:TextFont9:-3:-3:0
-#6017:6216:default:-3:-3:0
-#**  PhEDIT attribute block ends (-0000594)**/
+
+//output user's current param to file 
+int outputFile(){
+    //for output of time in file
+    time_t Time = time(NULL);
+    struct tm tme = *localtime(&Time);
+    char *path = "./output.txt";
+      
+	FILE *fptr;
+    fptr = fopen(path, "w");
+    
+	if( fptr == NULL )
+	{
+        printf("Error with writing! Invalid Path\n");
+        return -1;
+	}
+
+    fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tme.tm_year-100, tme.tm_mon+1, tme.tm_mday, tme.tm_hour, tme.tm_min);
+    fprintf(fptr,"-Human readable form\nFrequency: %lfHz\n", global_frequency*FREQUENCY_MAX/255.0);
+    fprintf(fptr,"Amplitude: %lfV\n", global_amplitude*AMPLITUDE_MAX/255.0);
+    fprintf(fptr,"Waveform: %s\n",waveform?"Square":"Sine");
+    fprintf(fptr,"-For program, value in 8 bits\n");
+    fprintf(fptr,"Scaled Frequency: %d\nScaled Amplitude: %d",global_frequency, global_amplitude);
+	fclose(fptr);
+
+    printf("Output Path is %s\n", path);
+    printf("File saved!\n");
+
+	return 0;
+}
