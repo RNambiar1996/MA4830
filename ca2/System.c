@@ -299,7 +299,9 @@ int outputFile(){
 	}
 
     fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tme.tm_year-100, tme.tm_mon+1, tme.tm_mday, tme.tm_hour, tme.tm_min);
-    fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\n",global_frequency*FREQUENCY_MAX/255.0, global_amplitude*AMPLITUDE_MAX/255.0);
+    fprintf(fptr,"Frequency: %lfHz\nAmplitude: %lfV\n Waveform: ",global_frequency*FREQUENCY_MAX/255.0, global_amplitude*AMPLITUDE_MAX/255.0);
+    fprintf(fptr,"Waveform: %s\n-for program, value in 8 bits\n",waveform?"Square":"Sine");
+    fprintf(fptr,"Scaled frequency: %d\nScaled Amplitude: %d\n",global_frequency, global_amplitude);
 	fclose(fptr);
 
     pthread_mutex_lock( &print_mutex );
