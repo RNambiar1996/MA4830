@@ -37,19 +37,24 @@ int main(int argc, char *argv[])
     }
 
     printInit();
-    printf("---------- Process Officially Starts!!!---------\n");
     
     // spin main thread
-    while(1)
+    if ( reuse_param )
     {
-        if ( !reuse_param )
+	    printCurrent();          //print current frequency and amplitude only once
+    	while( true )
+    		delay(10);
+    }
+    else // reuse_param == false
+    {
+    	while( true )
+    	{
             check_info_switch(); //check info switch to prompt saving and/or quit,
-            
-        //printf("main after check info switch\n");
-        printCurrent();          //print current frequency and amplitude 
-        delay(100);
-        //sleep(1);                //change to 1 milisecond in QNX
-    }  
+        	printCurrent();          //print current frequency and amplitude 
+       		delay(10);
+    	}
+    }
+    
 
     return 0;
 }

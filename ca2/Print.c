@@ -4,20 +4,22 @@
 // local relative to this source code
 uint8_t local_frequency;
 uint8_t local_amplitude;
+bool local_waveform;
 uint8_t previous_local_frequency;
 uint8_t previous_local_amplitude;
+bool previous_local_waveform;
 
 // to store value after conversion
 double real_frequency;
 double real_amplitude;
 
 void printInit(){
-	//printf("\33[2J"); // clears screen
+	printf("\33[2J"); // clears screen
     printf("---------- Welcome to the G-code. This program outputs waveform to the oscilloscope. ----------\n");
     printf("       __________                                                  _ _  \n");
     printf("     /           \\                                               |   | \n");
     printf("    /     ________|                                              |   |  \n");
-    printf("   |     /                            ________    _____       __/    |  \n");
+    printf("   |     /                            ________    _____       __/    |   ________ \n");
     printf("   |    |      ____    _________     /   _____|  /  __  \\   /  __    |  /   ____  \\    \n");
     printf("   |    |    /_    \\  |         |   |   /       |  |  |  |  |  |  |  |  |  |___|  |     \n");
     printf("   |    \\______|   |  |_________|   |   |       |  |  |  |  |  |  |  |  |   ______/     \n");
@@ -36,20 +38,29 @@ void printInit(){
     printf("    -The program will update the terminal screen with the latest values of frequency, and amplitude.\n");
     printf("    -Toggle switch 'a' will not be available if parameters are loaded from a file.\n");
     printf("    -After \"ctrl+c\" is detected, the program will shutdown all threads systematically.\n\n");
+    printf("\n\n\n"); // for printSave(), so that the current values will remain even after pause
 }
 
 void printSave(){ // display save instructions and current value info
     char input[8];
-    	//printf("f");
-    //flush_input();
-    	//printf("g");
+
+	int count, lines_to_remove = 0;
+
     // save instructions/info
     pthread_mutex_lock( &print_mutex );
-    	//printf("h");
-    printf("Enter 's' to save, 'q' to quit, other enter to continue\n");
+    printf("\nEnter 's' to save, 'q' to quit, other enter to continue\n");
     pthread_mutex_unlock( &print_mutex );
+    
+    ++lines_to_remove;
+    
     scanf("%[^\n]s", input);
+    ++lines_to_remove; // scanf takes 1 line too
     flush_input();
+    
+    pthread_mutex_lock( &print_mutex );
+    printf("\33[1A");    //move cursor up 1 line
+    printf("%c[2K", 27); //clear entire line
+    pthread_mutex_unlock( &print_mutex );
     
     if ( !strcmp(input, "q") || !strcmp(input, "Q") )
     {
@@ -69,14 +80,16 @@ void printSave(){ // display save instructions and current value info
             pthread_mutex_lock( &print_mutex );
             printf("Output failed!\n");
             pthread_mutex_unlock( &print_mutex );
+            ++lines_to_remove;
         }
-
+        lines_to_remove += 3;
     }
     else
     {
         pthread_mutex_lock( &print_mutex );
         printf("Continuing program...\n");
         pthread_mutex_unlock( &print_mutex );
+        ++lines_to_remove;
     }
 
     pthread_mutex_lock( &global_stop_mutex );
@@ -86,26 +99,37 @@ void printSave(){ // display save instructions and current value info
     pthread_mutex_unlock( &global_stop_mutex );
     
     pthread_mutex_lock(&print_mutex);
-    printf("----------  Resuming The G Code ----------\n");
+    printf("----------  Resuming The G-code ----------\n");
     pthread_mutex_unlock(&print_mutex);
+    lines_to_remove += 2;
 
-    sleep(1);//delay(1000); // stop 1 second to display the previous printf()
+    sleep(2); // stop 2 seconds to display the lines
+    
+    pthread_mutex_lock(&print_mutex);
+    for ( count = 0; count < lines_to_remove; ++ count )
+    {
+        printf("\33[1A");     //move cursor up 1 line
+    	printf("%c[2K", 27); //clear entire line
+    }
+    printf("\n"); // just to refresh the screen, otherwise would only refresh if have update from potentiometer
+    pthread_mutex_unlock(&print_mutex);
 }
 
 void printCurrent()
 {
+	int count = 0;
+
     pthread_mutex_lock(&global_var_mutex);
     local_amplitude = global_amplitude;
     local_frequency = global_frequency;
+    local_waveform = waveform;
     pthread_mutex_unlock(&global_var_mutex);
 
     //if global var changed, then reprint current value
-    if( abs(local_frequency-previous_local_frequency)>1 || abs(local_frequency-previous_local_frequency)>1 )
+    if( abs(local_frequency-previous_local_frequency)>1 || abs(local_frequency-previous_local_frequency)>1 || !!local_waveform != !!previous_local_waveform )
     {
         if (local_frequency == 0)
             real_frequency = FREQUENCY_MIN;
-        else if (local_frequency == 255)
-            real_frequency = FREQUENCY_MAX;
         else
             real_frequency = local_frequency/255.0 * FREQUENCY_MAX;
 
@@ -114,31 +138,45 @@ void printCurrent()
         pthread_mutex_lock(&print_mutex);
         //printf("\n\n\n\n\n");
 
-        printf("  Current frequency: %lf\n", real_frequency);
-        printf("  Current amplitude: %lf\n", real_amplitude);
+    	for ( count = 0; count < 3; ++ count )
+    	{
+        	printf("\33[1A");     //move cursor up 1 line
+    		printf("%c[2K", 27); //clear entire line
+    	}
 
-        printf("  real frequency: %d\n", local_frequency);
-        printf("  real amplitude: %d\n", local_amplitude);
+        printf("  Current frequency : %lf\n", real_frequency);
+        printf("  Current amplitude : %lf\n", real_amplitude);
+        printf("  Current waveform  : %s\n", local_waveform? "Square wave" : "Sine wave");
 
-        printf("\33[1A");    //move cursor up 1 line
-        printf("%c[2K", 27); //clear entire line
-        printf("\33[1A");    //move cursor up 1 line
-        printf("%c[2K", 27); //clear entire line
-        
-        printf("\33[1A");    //move cursor up 1 line
-        printf("%c[2K", 27); //clear entire line
-        printf("\33[1A");    //move cursor up 1 line
-        printf("%c[2K", 27); //clear entire line
+        //printf("  real frequency: %d\n", local_frequency);
+        //printf("  real amplitude: %d\n", local_amplitude);
 
         pthread_mutex_unlock(&print_mutex);
+        
+		previous_local_frequency = local_frequency;
+		previous_local_amplitude = local_amplitude;
+		previous_local_waveform = local_waveform;
     }
 }
 
 #/** PhEDIT attribute block
 #-11:16777215
-#0:4553:default:-3:-3:0
-#4553:4554:FixedFont9:-3:-3:0
-#4554:4871:TextFont9:-3:-3:0
-#4871:4872:FixedFont9:-3:-3:0
-#4872:5343:default:-3:-3:0
-#**  PhEDIT attribute block ends (-0000229)**/
+#0:2984:default:-3:-3:0
+#2984:3003:TextFont9:0:-1:0
+#3003:3004:FixedFont9:0:-1:0
+#3004:3115:TextFont9:0:-1:0
+#3115:4505:default:-3:-3:0
+#4505:4524:TextFont9:0:-1:0
+#4524:4526:FixedFont9:0:-1:0
+#4526:4754:TextFont9:0:-1:0
+#4754:5470:default:-3:-3:0
+#5470:5471:FixedFont9:-3:-3:0
+#5471:5577:TextFont9:-3:-3:0
+#5577:5596:TextFont9:0:-1:0
+#5596:5598:FixedFont9:0:-1:0
+#5598:5676:TextFont9:0:-1:0
+#5676:5812:TextFont9:-3:-3:0
+#5812:5894:TextFont9:0:-1:0
+#5894:6017:TextFont9:-3:-3:0
+#6017:6216:default:-3:-3:0
+#**  PhEDIT attribute block ends (-0000594)**/
