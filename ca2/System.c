@@ -204,14 +204,14 @@ void system_shutdown()
     // Wait for oscilloscope output thread to join
     if( pthread_join(oscilloscope_thread_handle, &status) ) // returns 0 on success
     {
-        printf("ERROR; return code from pthread_join() is %d\n", status);
+        printf("ERROR; return code from wave pthread_join() is %d\n", status);
         exit(EXIT_FAILURE);
     }
 
     // Wait for hardware thread to join
     if( pthread_join(hardware_thread_handle, &status) ) // returns 0 on success
     {
-        printf("ERROR; return code from pthread_join() is %d\n", status);
+        printf("ERROR; return code from hardware pthread_join() is %d\n", status);
         exit(EXIT_FAILURE);
     }
 

@@ -97,7 +97,6 @@ uint16_t aio_read(uint16_t channel){
 	out16(MUXCHAN,0x0D00|channel);
 
 	out16(AD_DATA,0);
-	//while(!(in16(MUXCHAN) & 0x4000));
 	return in16(AD_DATA);
 }
 

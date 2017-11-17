@@ -79,6 +79,14 @@ void printSave(){
         pthread_mutex_lock( &print_mutex );
         printf("Shutting down program!\n");
         pthread_mutex_unlock( &print_mutex );
+        
+        // wakes hardware input thread up to check kill_switch and terminate
+        pthread_mutex_lock( &global_stop_mutex );
+    	system_pause = false;
+    	info_switch = false;
+    	pthread_cond_signal(&info_switch_cond);     // signal hardware thread to wake up
+    	pthread_mutex_unlock( &global_stop_mutex );
+        
         system_shutdown();
     }
     else if( !strcmp(input, "s") || !strcmp(input, "S") )
@@ -87,7 +95,7 @@ void printSave(){
         printf("Saving parameters!\n");
         pthread_mutex_unlock( &print_mutex );
 
-        if ( !outputFile() )
+        if ( outputFile() )
         {
             pthread_mutex_lock( &print_mutex );
             printf("Output failed!\n");
@@ -178,7 +186,7 @@ int outputFile(){
     //for output of time in file, and file path
     char *path = "./output.txt";
     time_t Time = time(NULL);
-    struct tm time_struct = *localtime(&Time);
+    struct tm tme = *localtime(&Time);
       
 	FILE *fptr;
     fptr = fopen(path, "w");
