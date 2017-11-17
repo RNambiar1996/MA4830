@@ -12,6 +12,7 @@ double real_frequency;
 double real_amplitude;
 
 void printInit(){
+	//printf("\33[2J"); // clears screen
     printf("---------- Welcome to the G-code. This program outputs waveform to the oscilloscope. ----------\n");
     printf("       __________                                                  _ _  \n");
     printf("     /           \\                                               |   | \n");
@@ -39,12 +40,16 @@ void printInit(){
 
 void printSave(){ // display save instructions and current value info
     char input[8];
-    
+    	//printf("f");
+    //flush_input();
+    	//printf("g");
     // save instructions/info
     pthread_mutex_lock( &print_mutex );
+    	//printf("h");
     printf("Enter 's' to save, 'q' to quit, other enter to continue\n");
     pthread_mutex_unlock( &print_mutex );
     scanf("%[^\n]s", input);
+    flush_input();
     
     if ( !strcmp(input, "q") || !strcmp(input, "Q") )
     {
@@ -76,6 +81,7 @@ void printSave(){ // display save instructions and current value info
 
     pthread_mutex_lock( &global_stop_mutex );
     system_pause = false;
+    info_switch = 0;
     pthread_mutex_unlock( &global_stop_mutex );
     
     pthread_mutex_lock(&print_mutex);
@@ -105,15 +111,33 @@ void printCurrent()
         real_amplitude = local_amplitude/255.0 * AMPLITUDE_MAX;
 
         pthread_mutex_lock(&print_mutex);
-        //printf("\n\n\n");
-        printf("\33[1A");    //move cursor up 1 line
-        printf("%c[2K", 27); //clear entire line
-        printf("\33[1A");    //move cursor up 1 line
-        printf("%c[2K", 27); //clear entire line
+        //printf("\n\n\n\n\n");
 
         printf("  Current frequency: %lf\n", real_frequency);
         printf("  Current amplitude: %lf\n", real_amplitude);
 
+        printf("  real frequency: %d\n", local_frequency);
+        printf("  real amplitude: %d\n", local_amplitude);
+
+        printf("\33[1A");    //move cursor up 1 line
+        printf("%c[2K", 27); //clear entire line
+        printf("\33[1A");    //move cursor up 1 line
+        printf("%c[2K", 27); //clear entire line
+        
+        printf("\33[1A");    //move cursor up 1 line
+        printf("%c[2K", 27); //clear entire line
+        printf("\33[1A");    //move cursor up 1 line
+        printf("%c[2K", 27); //clear entire line
+
         pthread_mutex_unlock(&print_mutex);
     }
 }
+
+#/** PhEDIT attribute block
+#-11:16777215
+#0:4553:default:-3:-3:0
+#4553:4554:FixedFont9:-3:-3:0
+#4554:4871:TextFont9:-3:-3:0
+#4871:4872:FixedFont9:-3:-3:0
+#4872:5343:default:-3:-3:0
+#**  PhEDIT attribute block ends (-0000229)**/

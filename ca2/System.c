@@ -18,6 +18,10 @@
 #include <pthread.h>
 #include <time.h>
 
+#include <sys/neutrino.h>
+#include <process.h>
+#include <sched.h>
+
 // under global_var_mutex
 uint8_t global_frequency;
 uint8_t global_amplitude;
@@ -28,7 +32,7 @@ bool hardware_ready;
 
 // under global_stop_mutex
 bool kill_switch;
-bool info_switch;
+bool info_switch = 0;
 bool system_pause;
 
 // shared across threads, but constant after system_init()
@@ -53,6 +57,9 @@ bool calibration_flag = false; // to check whether user wants to calibrate poten
 
 int system_init(const char *file_param)
 {
+	struct sched_param  params;
+	int policy;
+
     // local variables
     bool calibrate;
 
@@ -74,6 +81,10 @@ int system_init(const char *file_param)
     kill_switch = false;  // for ctrl + c
     waveform = 0;         // waveform defaults to 0, which is sine wave
 
+	//sched_getparam(0, &params);
+	//params.sched_priority+=1;
+	//sched_setscheduler(0,SCHED_RR,&params);
+		
     // Check validity of file_param
     if ( strcmp(file_param, "0") ) // if file_param is not "0"
     {
@@ -146,6 +157,7 @@ int system_init(const char *file_param)
     // get the current info_switch state (at this point, read_input() thread has updated it)
     pthread_mutex_lock(&global_stop_mutex);
     info_switch_prev = info_switch; // for debounce
+    //printf("\n\n\n\n\n\n\n first infos: %d infos_p: %d \n\n\n\n\n\n", info_switch, info_switch_prev);
     pthread_mutex_lock(&global_stop_mutex);
 
     if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
@@ -168,6 +180,8 @@ int system_init(const char *file_param)
         perror("pthread_attr_destroy");
         exit(EXIT_FAILURE);
     }
+
+	//printf("\n\n\n\n\n\n\n endsysteminit infos: %d infos_p: %d \n\n\n\n\n\n", info_switch, info_switch_prev);
 
     return 0; // successfully init all threads
 }
@@ -285,7 +299,7 @@ int outputFile(){
 	}
 
     fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tme.tm_year-100, tme.tm_mon+1, tme.tm_mday, tme.tm_hour, tme.tm_min);
-    fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\n",global_frequency, global_amplitude);
+    fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\n",global_frequency*FREQUENCY_MAX/255.0, global_amplitude*AMPLITUDE_MAX/255.0);
 	fclose(fptr);
 
     pthread_mutex_lock( &print_mutex );
@@ -299,22 +313,33 @@ int outputFile(){
 void flush_input()
 {
     char flush_ch;
-    while ( (flush_ch = getchar()) != '\n' && flush_ch != EOF );
+    while ( (flush_ch = getchar()) != '\n' );//&& flush_ch != EOF );
 }
 
 void check_info_switch()
 {
     pthread_mutex_lock( &global_stop_mutex );
 
-    if ( info_switch != info_switch_prev ) // checks for info_switch toggle
+	//printf("a");
+
+    if ( info_switch ) // checks for info_switch toggle
     {
-        info_switch_prev = info_switch;
+    	//printf("b");
+    	//printf("\n\n\n\n\n info switch if infos: %d, infos: %d \n\n\n\n\n", info_switch, info_switch_prev);
+        //info_switch_prev = info_switch;
+        
         system_pause = true;
     }
 
     pthread_mutex_unlock( &global_stop_mutex );
 
+	//printf("c");
+
     // no need mutex, only main thread writes to system_pause variable, and only main thread calls this function
     if ( system_pause )
+    {
+    	//printf("d");
         printSave();
+        //printf("e");
+     }
 }

@@ -44,8 +44,11 @@ int main(int argc, char *argv[])
     {
         if ( !reuse_param )
             check_info_switch(); //check info switch to prompt saving and/or quit,
+            
+        //printf("main after check info switch\n");
         printCurrent();          //print current frequency and amplitude 
-        sleep(1);                //change to 1 milisecond in QNX
+        delay(100);
+        //sleep(1);                //change to 1 milisecond in QNX
     }  
 
     return 0;
