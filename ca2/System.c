@@ -2,7 +2,7 @@
 
 #include "Global.h"
 #include "System.h"
-#include "hardware.h"
+#include "Hardware.h"
 
 // under global_var_mutex
 uint8_t global_frequency;

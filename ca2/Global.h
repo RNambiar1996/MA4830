@@ -19,7 +19,6 @@ extern uint8_t global_frequency;
 extern uint8_t global_amplitude;
 extern bool var_update;
 extern bool waveform;
-extern bool calibration_done; // only in use if user wants to calibrate
 extern bool hardware_ready;
 
 // under global_stop_mutex
@@ -43,7 +42,7 @@ extern struct pci_dev_info info;
 extern void *hdl;
 
 // etc
-extern bool reuse_param;
+extern bool reuse_param;          // for choosing main function's spinning conditions
 extern sigset_t all_sig_mask_set;
 
 #endif
