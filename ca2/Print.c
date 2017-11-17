@@ -27,22 +27,22 @@ void printInit(){
     printf("     \\____________/                  \\________|  \\______/   \\_______/    \\________| \n\n");
     printf("  -Instructions:\n");
     printf("    -Toggle switches(from left to right):\n");
-    printf("       a. pause switch (toggling it will pause the hardware input, and prompt user to save, quit or continue.)\n");
-    printf("       b. waveform     (change between sine wave and square wave)\n");
+    printf("       a. pause switch (Toggling it pauses hardware input and prompt user to save, quit or continue.)\n");
+    printf("       b. waveform     (Change between sine wave and square wave)\n");
     printf("    -Analog input(from left to right):\n");
-    printf("       a. D/A 0        (changes frequency of wave)\n");
-    printf("       b. D/A 1        (changes amplitude of wave)\n");
+    printf("       a. D/A 0        (Changes frequency of wave)\n");
+    printf("       b. D/A 1        (Changes amplitude of wave)\n");
     printf("  -Other information:\n");
-    printf("    -The program outputs to A/D 0 port.\n");
+    printf("    -The program outputs wave function to A/D port '0'.\n");
     printf("    -Number of LED lit up shows the amplitude level.\n");
     printf("    -The program will update the terminal screen with the latest values of frequency, and amplitude.\n");
-    printf("    -Toggle switch 'a' will not be available if parameters are loaded from a file.\n");
+    printf("    -If parameters are loaded from file, you can only review it, hardware input is disabled.\n");
     printf("    -After \"ctrl+c\" is detected, the program will shutdown all threads systematically.\n\n");
     printf("\n\n\n"); // for printSave(), so that the current values will remain even after pause
 }
 
-void printSave(){ // display save instructions and current value info
-    char input[8];
+void printSave(){  // display save instructions
+    char input[8]; // buffer for scanf
 
 	int count, lines_to_remove = 0;
 
@@ -50,16 +50,15 @@ void printSave(){ // display save instructions and current value info
     pthread_mutex_lock( &print_mutex );
     printf("\nEnter 's' to save, 'q' to quit, other enter to continue\n");
     pthread_mutex_unlock( &print_mutex );
-    
     ++lines_to_remove;
     
-    scanf("%[^\n]s", input);
-    ++lines_to_remove; // scanf takes 1 line too
+    scanf("%[^\n]8s", input);
+    ++lines_to_remove;   // scanf takes 1 line too
     flush_input();
     
     pthread_mutex_lock( &print_mutex );
-    printf("\33[1A");    //move cursor up 1 line
-    printf("%c[2K", 27); //clear entire line
+    printf("\33[1A");    // move cursor up 1 line
+    printf("%c[2K", 27); // clear entire line
     pthread_mutex_unlock( &print_mutex );
     
     if ( !strcmp(input, "q") || !strcmp(input, "Q") )
@@ -108,17 +107,19 @@ void printSave(){ // display save instructions and current value info
     pthread_mutex_lock(&print_mutex);
     for ( count = 0; count < lines_to_remove; ++ count )
     {
-        printf("\33[1A");     //move cursor up 1 line
+        printf("\33[1A");    //move cursor up 1 line
     	printf("%c[2K", 27); //clear entire line
     }
-    printf("\n"); // just to refresh the screen, otherwise would only refresh if have update from potentiometer
+    printf("\n"); // just to refresh the screen, otherwise would only refresh if have update from hardware input
     pthread_mutex_unlock(&print_mutex);
 }
 
 void printCurrent()
 {
+    // for loop counter
 	int count = 0;
 
+    // grabs latest values and release mutex
     pthread_mutex_lock(&global_var_mutex);
     local_amplitude = global_amplitude;
     local_frequency = global_frequency;
@@ -136,7 +137,6 @@ void printCurrent()
         real_amplitude = local_amplitude/255.0 * AMPLITUDE_MAX;
 
         pthread_mutex_lock(&print_mutex);
-        //printf("\n\n\n\n\n");
 
     	for ( count = 0; count < 3; ++ count )
     	{
@@ -148,11 +148,9 @@ void printCurrent()
         printf("  Current amplitude : %lf\n", real_amplitude);
         printf("  Current waveform  : %s\n", local_waveform? "Square wave" : "Sine wave");
 
-        //printf("  real frequency: %d\n", local_frequency);
-        //printf("  real amplitude: %d\n", local_amplitude);
-
         pthread_mutex_unlock(&print_mutex);
         
+        // update previous values
 		previous_local_frequency = local_frequency;
 		previous_local_amplitude = local_amplitude;
 		previous_local_waveform = local_waveform;

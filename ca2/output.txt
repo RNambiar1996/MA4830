@@ -1,0 +1,8 @@
+##Output Param at: 17-11-17 15:59
+-Human readable form
+Frequency: 588.235294Hz
+Amplitude: 4.882353V
+Waveform: Sine
+-For program, value in 8 bits
+Scaled Frequency: 250
+Scaled Amplitude: 249
