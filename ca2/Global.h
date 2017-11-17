@@ -10,15 +10,10 @@
 #include <pthread.h>
 #include <stdint.h>
 
-#define FREQUENCY_MAX 600.0
-#define FREQUENCY_MIN 1.0
+#define FREQUENCY_MAX 1000.0
+#define FREQUENCY_MIN 0.1
 #define AMPLITUDE_MAX 5.0
 #define AMPLITUDE_MIN 0.0
-
-enum wave_type {
-  SINE   = 0,
-  SQUARE = 1,
-}; // boolean only for now
 
 // under global_var_mutex
 extern uint8_t global_frequency;

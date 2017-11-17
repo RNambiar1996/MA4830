@@ -12,12 +12,12 @@ double real_frequency;
 double real_amplitude;
 
 void printInit(){
-	printf("\33[2J"); // clears screen
+	//printf("\33[2J"); // clears screen
     printf("---------- Welcome to the G-code. This program outputs waveform to the oscilloscope. ----------\n");
     printf("       __________                                                  _ _  \n");
     printf("     /           \\                                               |   | \n");
     printf("    /     ________|                                              |   |  \n");
-    printf("   |     /                            ________    _____       __/    |   ________ \n");
+    printf("   |     /                            ________    _____       __/    |  \n");
     printf("   |    |      ____    _________     /   _____|  /  __  \\   /  __    |  /   ____  \\    \n");
     printf("   |    |    /_    \\  |         |   |   /       |  |  |  |  |  |  |  |  |  |___|  |     \n");
     printf("   |    \\______|   |  |_________|   |   |       |  |  |  |  |  |  |  |  |   ______/     \n");
@@ -103,6 +103,8 @@ void printCurrent()
     {
         if (local_frequency == 0)
             real_frequency = FREQUENCY_MIN;
+        else if (local_frequency == 255)
+            real_frequency = FREQUENCY_MAX;
         else
             real_frequency = local_frequency/255.0 * FREQUENCY_MAX;
 

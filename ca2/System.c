@@ -51,12 +51,6 @@ pthread_t hardware_thread_handle;     // handles analog/digital hardware
 // Convar to synchronise hardware and system, make sure hardware is ready before spawning oscilloscope output
 pthread_cond_t hardware_ready_cond = PTHREAD_COND_INITIALIZER;
 
-// for hardware
-int badr[5];
-uintptr_t iobase[6];
-struct pci_dev_info info;
-void *hdl;
-
 // global variable for only this source code
 bool info_switch_prev;         // for debounce
 bool calibration_flag = false; // to check whether user wants to calibrate potentiometer
@@ -77,9 +71,8 @@ int system_init(const char *file_param)
     int count;           // for loop counter
 
     // Just to make it a little bit more robust, instead of assuming they are in order
-    const char *freq_str = "Scaled Frequency: ";
-    const char *amp_str  = "Scaled Amplitude: ";
-    const char *waveform_str  = "Waveform: ";
+    const char *freq_str = "Frequency: ";
+    const char *amp_str  = "Amplitude: ";
 
     // pthread attribute
     pthread_attr_t joinable_attr;
@@ -121,12 +114,6 @@ int system_init(const char *file_param)
                 strncpy( temp_str, &str_buffer[strlen(amp_str)], (line_length - strlen(amp_str)) ); // get value
                 global_amplitude = strtod( temp_str, NULL); // set value
             }
-            else if ( !strncmp(str_buffer, waveform_str, strlen(waveform_str) ) )
-            {
-                memset( temp_str, '\0', sizeof(temp_str)); // clear string
-                strncpy( temp_str, &str_buffer[strlen(amp_str)], (line_length - strlen(amp_str)) ); // get value
-                waveform = strcmp(temp_str, "Sine"); // set value
-            }
 
             // clear string buffer, and line length variables
             memset(str_buffer, 0, sizeof(str_buffer));
@@ -155,23 +142,11 @@ int system_init(const char *file_param)
     }
 
     // Spawn all wanted threads
-    if (reuse_param)
+    if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_input, NULL ) ) // returns 0 on success
+    //if( pthread_create( &hardware_thread_handle, &joinable_attr, &output_osc_func, NULL ) ) // returns 0 on success
     {
-        if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_param, hw_struct ) ) // returns 0 on success
-        //if( pthread_create( &hardware_thread_handle, &joinable_attr, &output_osc_func, NULL ) ) // returns 0 on success
-        {
-            perror("pthread_create for read_param thread");
-            exit(EXIT_FAILURE);
-        }
-    }
-    else // reuse_param == false
-    {
-        if( pthread_create( &hardware_thread_handle, &joinable_attr, &read_input, NULL ) ) // returns 0 on success
-        //if( pthread_create( &hardware_thread_handle, &joinable_attr, &output_osc_func, NULL ) ) // returns 0 on success
-        {
-            perror("pthread_create for read_input thread");
-            exit(EXIT_FAILURE);
-        }
+        perror("pthread_create for read_input thread");
+        exit(EXIT_FAILURE);
     }
     
     // convar to make sure frequency and amplitude has been mapped to current potentiometer value
@@ -324,9 +299,7 @@ int outputFile(){
 	}
 
     fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tme.tm_year-100, tme.tm_mon+1, tme.tm_mday, tme.tm_hour, tme.tm_min);
-    fprintf(fptr,"Frequency: %lfHz\nAmplitude: %lfV\n Waveform: ",global_frequency*FREQUENCY_MAX/255.0, global_amplitude*AMPLITUDE_MAX/255.0);
-    fprintf(fptr,"Waveform: %s\n\n-for program, value in 8 bits\n",waveform?"Square":"Sine");
-    fprintf(fptr,"Scaled frequency: %d\nScaled Amplitude: %d\n",global_frequency, global_amplitude);
+    fprintf(fptr,"Frequency: %lf\nAmplitude: %lf\n",global_frequency*FREQUENCY_MAX/255.0, global_amplitude*AMPLITUDE_MAX/255.0);
 	fclose(fptr);
 
     pthread_mutex_lock( &print_mutex );
