@@ -18,9 +18,6 @@
 // system init
 int system_init(const char *file_param);
 
-
-
-
 // setup signal handling variables
 void signal_handling_setup();
 
@@ -29,9 +26,6 @@ void INThandler(int sig);
 
 // inititate systematic program shutdown
 void system_shutdown();
-
-// to flush '\n'
-void flush_input();
 
 // check whether pause switch is toggled
 void check_info_switch();

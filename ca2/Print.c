@@ -13,7 +13,8 @@ bool previous_local_waveform;
 double real_frequency;
 double real_amplitude;
 
-//print INitial lines
+
+//print Initial lines
 void printInit(){
 	printf("\33[2J"); // clears screen
     printf("---------- Welcome to the G-code. This program outputs waveform to the oscilloscope. ----------\n");
@@ -42,9 +43,11 @@ void printInit(){
     printf("\n\n\n"); // for printSave(), so that the current values will remain even after pause
 }
 
-void printSave(){  // display save instructions
-    char input[8]; // buffer for scanf
 
+// display save instructions
+void printSave(){  
+    char input[8]; // buffer for scanf
+    char flush_ch; // to flush '\n'
 	int count, lines_to_remove = 0;
 
     // save instructions/info
@@ -54,8 +57,8 @@ void printSave(){  // display save instructions
     ++lines_to_remove;
     
     scanf("%[^\n]8s", input);
-    ++lines_to_remove;   // scanf takes 1 line too
-    flush_input();
+    ++lines_to_remove;                          // scanf takes 1 line too
+    while ( (flush_ch = getchar()) != '\n' );   //flush input 
     
     pthread_mutex_lock( &print_mutex );
     printf("\33[1A");    // move cursor up 1 line
@@ -114,6 +117,7 @@ void printSave(){  // display save instructions
     printf("\n"); // just to refresh the screen, otherwise would only refresh if have update from hardware input
     pthread_mutex_unlock(&print_mutex);
 }
+
 
 //print current frequency and amplitude on screen
 void printCurrent() 
@@ -177,11 +181,13 @@ int outputFile(){
 	}
 
     fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d\n", tme.tm_year-100, tme.tm_mon+1, tme.tm_mday, tme.tm_hour, tme.tm_min);
-    fprintf(fptr,"-Human readable form\nFrequency: %lfHz\n", global_frequency*FREQUENCY_MAX/255.0);
+    fprintf(fptr,"-Human readable form\n");
+    fprintf(fptr,"Frequency: %lfHz\n", global_frequency*FREQUENCY_MAX/255.0);
     fprintf(fptr,"Amplitude: %lfV\n", global_amplitude*AMPLITUDE_MAX/255.0);
-    fprintf(fptr,"Waveform: %s\n",waveform?"Square":"Sine");
+    fprintf(fptr,"Waveform: %s\n", waveform?"Square":"Sine");
     fprintf(fptr,"-For program, value in 8 bits\n");
-    fprintf(fptr,"Scaled Frequency: %d\nScaled Amplitude: %d",global_frequency, global_amplitude);
+    fprintf(fptr,"Scaled Frequency: %d\n", global_frequency);
+    fprintf(fptr,"Scaled Amplitude: %d", global_amplitude);
 	fclose(fptr);
 
     printf("Output Path is %s\n", path);

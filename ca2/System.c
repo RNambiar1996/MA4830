@@ -189,14 +189,6 @@ void signal_handling_setup()
     signal(SIGINT, INThandler); // main thread catches SIGINT
 }
 
-void* hardware_handle_func(void* arg)
-{
-
-}
-void* output_osc_func(void* arg)
-{
-	
-}
 
 // basically just wait all threads to join, and check whether to save the param
 void system_shutdown()
@@ -255,6 +247,7 @@ void system_shutdown()
     exit(EXIT_SUCCESS);
 }
 
+
 void INThandler(int sig) // handles SIGINT
 {
     // alerts ctrl+c detection to user
@@ -265,11 +258,6 @@ void INThandler(int sig) // handles SIGINT
     system_shutdown();
 }
 
-void flush_input()
-{
-    char flush_ch;
-    while ( (flush_ch = getchar()) != '\n' );
-}
 
 void check_info_switch()
 {
