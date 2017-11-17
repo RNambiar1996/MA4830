@@ -188,6 +188,7 @@ void *read_input(){
       pthread_mutex_lock(&global_stop_mutex);
       //printf("\n\n\n\ninfo switch become true\n\n\n\n\n");
       info_switch = 1;//!info_switch;
+      while(info_switch) pthread_cond_wait(&info_switch_cond);
       pthread_mutex_unlock(&global_stop_mutex);
       info_switch_prev=infos;
     }
