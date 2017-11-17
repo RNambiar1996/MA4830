@@ -93,7 +93,7 @@ void printCurrent()
     pthread_mutex_unlock(&global_var_mutex);
 
     //if global var changed, then reprint current value
-    if( (local_frequency-previous_local_frequency)>1 || (local_frequency-previous_local_frequency)>1 )
+    if( abs(local_frequency-previous_local_frequency)>1 || abs(local_frequency-previous_local_frequency)>1 )
     {
         if (local_frequency == 0)
             real_frequency = FREQUENCY_MIN;
