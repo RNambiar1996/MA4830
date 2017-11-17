@@ -46,10 +46,10 @@
 
 
 // for hardware
-extern int badr[5];
-extern uintptr_t iobase[6];
-extern struct pci_dev_info info;
-extern void *hdl;
+//extern int badr[5];
+//extern uintptr_t iobase[6];
+//extern struct pci_dev_info info;
+//extern void *hdl;
 
 void pci_setup();
 

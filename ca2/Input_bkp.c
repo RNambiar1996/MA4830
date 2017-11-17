@@ -12,10 +12,10 @@ Maintainer	: Nicholas Adrian
 #include <sys/mman.h>
 #include "hardware.h"
 
-//int badr[5];
-//uintptr_t iobase[6];
-//struct pci_dev_info info;
-//void *hdl;
+int badr[5];
+uintptr_t iobase[6];
+struct pci_dev_info info;
+void *hdl;
 bool info_switch_prev;
 bool wavef;
 bool infos;
@@ -38,7 +38,7 @@ void pci_setup(){
 	info.VendorId=0x1307;								// Vendor and Device ID
 	info.DeviceId=0x01;
 	
-	if ((hw_struct->hdl=pci_attach_device(0, PCI_SHARE|PCI_INIT_ALL, 0, &info))==0) {
+	if ((hdl=pci_attach_device(0, PCI_SHARE|PCI_INIT_ALL, 0, &info))==0) {
 	  perror("pci_attach_device");
 	  exit(EXIT_FAILURE);
 	  }
@@ -107,14 +107,6 @@ void led(uint16_t lvl){
 	else if(0x7fff<=lvl & lvl<0xbfff) {out8(DIO_PORTB,0x07);}	// 32767<X<49151
 	else {out8(DIO_PORTB,0x0f);}					// >49151
 }
-
-void *read_param(){
-  pci_setup();
-  pthread_mutex_lock(&global_var_mutex);
-  hardware_ready = true;
-  pthread_cond_signal(&hardware_ready_cond);
-  pthread_mutex_unlock(&global_var_mutex);
-  }
 
 void *read_input(){
   bool waveform_prev;
