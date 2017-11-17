@@ -118,9 +118,9 @@ void *read_input(){
   }	
 
   //initialization to indicate hardware readiness
-  pthread_mutex_lock(&global_var_mutex);
   freq = aio_read(channel0);
   amp = aio_read(channel1);
+  pthread_mutex_lock(&global_var_mutex);
   global_frequency = freq>>8;
   global_amplitude = amp>>8;
   f_prev = global_frequency;
