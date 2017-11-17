@@ -81,7 +81,8 @@ void printSave(){ // display save instructions and current value info
 
     pthread_mutex_lock( &global_stop_mutex );
     system_pause = false;
-    info_switch = 0;
+    info_switch = false;
+    pthread_cond_signal(&info_switch_cond);
     pthread_mutex_unlock( &global_stop_mutex );
     
     pthread_mutex_lock(&print_mutex);
