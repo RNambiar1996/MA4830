@@ -12,10 +12,10 @@ Maintainer	: Nicholas Adrian
 #include <sys/mman.h>
 #include "hardware.h"
 
-//int badr[5];
-//uintptr_t iobase[6];
-//struct pci_dev_info info;
-//void *hdl;
+int badr[5];
+uintptr_t iobase[6];
+struct pci_dev_info info;
+void *hdl;
 bool info_switch_prev;
 bool wavef;
 bool infos;
@@ -29,45 +29,45 @@ uint16_t channel1 = 0x01;
 
 void pci_setup(){
 	int i;
-	memset(&hw_struct->info,0,sizeof(hw_struct->info));
+	memset(&info,0,sizeof(info));
 	if(pci_attach(0)<0) {
 	  perror("pci_attach");
 	  exit(EXIT_FAILURE);
 	  }
 	
-	hw_struct->info.VendorId=0x1307;								// Vendor and Device ID
-	hw_struct->info.DeviceId=0x01;
+	info.VendorId=0x1307;								// Vendor and Device ID
+	info.DeviceId=0x01;
 	
-	if ((hw_struct->hdl=pci_attach_device(0, PCI_SHARE|PCI_INIT_ALL, 0, &hw_struct->info))==0) {
+	if ((hdl=pci_attach_device(0, PCI_SHARE|PCI_INIT_ALL, 0, &info))==0) {
 	  perror("pci_attach_device");
 	  exit(EXIT_FAILURE);
 	  }
 	
 	if (DEBUG){  
 	  for(i=0;i<6;i++) {							// Another printf BUG ? - Break printf to two statements
-	    if(hw_struct->info.BaseAddressSize[i]>0) {
+	    if(info.BaseAddressSize[i]>0) {
 	      printf("Aperture %d  Base 0x%x Length %d Type %s\n", i, 
-	        PCI_IS_MEM(hw_struct->info.CpuBaseAddress[i]) ?  (int)PCI_MEM_ADDR(hw_struct->info.CpuBaseAddress[i]) : 
-	        (int)PCI_IO_ADDR(hw_struct->info.CpuBaseAddress[i]),hw_struct->info.BaseAddressSize[i], 
-	        PCI_IS_MEM(hw_struct->info.CpuBaseAddress[i]) ? "MEM" : "IO");
+	        PCI_IS_MEM(info.CpuBaseAddress[i]) ?  (int)PCI_MEM_ADDR(info.CpuBaseAddress[i]) : 
+	        (int)PCI_IO_ADDR(info.CpuBaseAddress[i]),info.BaseAddressSize[i], 
+	        PCI_IS_MEM(info.CpuBaseAddress[i]) ? "MEM" : "IO");
 	      }
 	  }  
 	
 	    														
-	printf("IRQ %d\n",hw_struct->info.Irq); 		
+	printf("IRQ %d\n",info.Irq); 		
 	}
 	
 	if(DEBUG)printf("\nDAS 1602 Base addresses:\n\n");
 	for(i=0;i<5;i++) {
-	  hw_struct->badr[i]=PCI_IO_ADDR(hw_struct->info.CpuBaseAddress[i]);
-	  if(DEBUG) printf("Badr[%d] : %x\n", i, hw_struct->badr[i]);
+	  badr[i]=PCI_IO_ADDR(info.CpuBaseAddress[i]);
+	  if(DEBUG) printf("Badr[%d] : %x\n", i, badr[i]);
 	  }
 	 
 		//printf("\nReconfirm Iobase:\n");  			// map I/O base address to user space						
 	for(i=0;i<5;i++) {								// expect CpuBaseAddress to be the same as iobase for PC
-	  hw_struct->iobase[i]=mmap_device_io(0x0f,hw_struct->badr[i]);	
-	  if(DEBUG) printf("Index %d : Address : %x ", i,hw_struct->badr[i]);
-	  if(DEBUG) printf("IOBASE  : %x \n",hw_struct->iobase[i]);
+	  iobase[i]=mmap_device_io(0x0f,badr[i]);	
+	  if(DEBUG) printf("Index %d : Address : %x ", i,badr[i]);
+	  if(DEBUG) printf("IOBASE  : %x \n",iobase[i]);
 	  }													
         if(ThreadCtl(_NTO_TCTL_IO,0)==1){
         perror("Thread Control");
@@ -107,14 +107,6 @@ void led(uint16_t lvl){
 	else if(0x7fff<=lvl & lvl<0xbfff) {out8(DIO_PORTB,0x07);}	// 32767<X<49151
 	else {out8(DIO_PORTB,0x0f);}					// >49151
 }
-
-void *read_param(){
-  pci_setup();
-  pthread_mutex_lock(&global_var_mutex);
-  hardware_ready = true;
-  pthread_cond_signal(&hardware_ready_cond);
-  pthread_mutex_unlock(&global_var_mutex);
-  }
 
 void *read_input(){
   bool waveform_prev;
