@@ -40,6 +40,7 @@ extern pthread_mutex_t global_stop_mutex;
 
 // convar
 extern pthread_cond_t hardware_ready_cond;
+extern pthread_cond_t info_switch_cond;
 
 // for hardware
 extern int badr[5];

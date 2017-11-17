@@ -50,6 +50,7 @@ pthread_t hardware_thread_handle;     // handles analog/digital hardware
 
 // Convar to synchronise hardware and system, make sure hardware is ready before spawning oscilloscope output
 pthread_cond_t hardware_ready_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t info_switch_cond = PTHREAD_COND_INITIALIZER;
 
 // for hardware
 int badr[5];
@@ -58,7 +59,7 @@ struct pci_dev_info info;
 void *hdl;
 
 // global variable for only this source code
-bool info_switch_prev;         // for debounce
+//bool info_switch_prev;         // for debounce
 bool calibration_flag = false; // to check whether user wants to calibrate potentiometer
 
 int system_init(const char *file_param)
@@ -86,7 +87,7 @@ int system_init(const char *file_param)
 
     // initializations
     kill_switch = false;  // for ctrl + c
-    waveform = 0;         // waveform defaults to 0, which is sine wave
+    //waveform = 0;         // waveform defaults to 0, which is sine wave
 
 	//sched_getparam(0, &params);
 	//params.sched_priority+=1;
@@ -180,10 +181,10 @@ int system_init(const char *file_param)
     pthread_mutex_unlock(&global_var_mutex);
     
     // get the current info_switch state (at this point, read_input() thread has updated it)
-    pthread_mutex_lock(&global_stop_mutex);
-    info_switch_prev = info_switch; // for debounce
-    //printf("\n\n\n\n\n\n\n first infos: %d infos_p: %d \n\n\n\n\n\n", info_switch, info_switch_prev);
-    pthread_mutex_lock(&global_stop_mutex);
+    // pthread_mutex_lock(&global_stop_mutex);
+    // info_switch_prev = info_switch; // for debounce
+    // //printf("\n\n\n\n\n\n\n first infos: %d infos_p: %d \n\n\n\n\n\n", info_switch, info_switch_prev);
+    // pthread_mutex_lock(&global_stop_mutex);
 
     if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
     //if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &hardware_handle_func, NULL ) ) // returns 0 on success
@@ -289,6 +290,13 @@ void system_shutdown()
         exit(EXIT_FAILURE);
     }
 
+    // Destroys pthread convar object
+    if( pthread_cond_destroy(&info_switch_cond) ) // returns 0 on success
+    {
+        perror("pthread_cond_destroy for info_switch_cond");
+        exit(EXIT_FAILURE);
+    }
+
     // no need mutex, all threads have terminated
     printf("All threads terminated. Ending The G Code. Good bye.\n");
 
@@ -345,16 +353,8 @@ void check_info_switch()
 {
     pthread_mutex_lock( &global_stop_mutex );
 
-	//printf("a");
-
     if ( info_switch ) // checks for info_switch toggle
-    {
-    	//printf("b");
-    	//printf("\n\n\n\n\n info switch if infos: %d, infos: %d \n\n\n\n\n", info_switch, info_switch_prev);
-        //info_switch_prev = info_switch;
-        
         system_pause = true;
-    }
 
     pthread_mutex_unlock( &global_stop_mutex );
 
@@ -362,9 +362,5 @@ void check_info_switch()
 
     // no need mutex, only main thread writes to system_pause variable, and only main thread calls this function
     if ( system_pause )
-    {
-    	//printf("d");
         printSave();
-        //printf("e");
-     }
 }
