@@ -45,12 +45,6 @@
 #define MAX_AMP 		255
 
 
-// for hardware
-//extern int badr[5];
-//extern uintptr_t iobase[6];
-//extern struct pci_dev_info info;
-//extern void *hdl;
-
 void pci_setup();
 
 void dio_setup();
