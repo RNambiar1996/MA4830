@@ -1,46 +1,41 @@
 #include "Global.h"
-#include "hardware.h"
+#include "Hardware.h"
 
 void *generateWave()
 {
+	//Variable declarations
+	//set resolution for wave points
 	int resolution = 80;
-
 	uint8_t frequency_8bit, amplitude_8bit;
-
 	float delta, T, delta_t, dummy, slope, frequency, amplitude;
-
 	unsigned int i;
 	unsigned int data[1000];
-
 	struct timespec t_delta;
-	
 	bool waveType;
 	
 	pthread_sigmask(SIG_SETMASK, &all_sig_mask_set, NULL);
 	
+	//providing thread control to use out16
 	if(ThreadCtl(_NTO_TCTL_IO,0)==-1) {
 	  perror("Thread Control");
 	  exit(1);
 	  }	
 	
-	//find waveform points
+	//for computing wave data points
 	delta = (2.0*PI)/((float)resolution);
 	
+	//outer while loop to keep the wave running
 	while(1)
 	{	
-		//locking the mutex
+		//locking the mutex to update local parameters to global parameters
 		pthread_mutex_lock(&global_var_mutex);
-
-		//updating variables for wave form 
-		//frequency_8bit = global_frequency;
-		//amplitude_8bit = global_amplitude;
 		frequency = (float)global_frequency;
 		amplitude = (float)global_amplitude;
 		waveType = waveform;
-
 		//unlocking the mutex
 		pthread_mutex_unlock(&global_var_mutex);
 	
+		//mapping potentiometer values to output frequency range
 		if (frequency == 0.0)
 		    frequency = FREQUENCY_MIN;
 		else
@@ -58,7 +53,7 @@ void *generateWave()
 			}	
 		}		
 		//square wave
-		else // if (waveType == 1)
+		else 
 		{
 			//filling data points for square wave
 			for(i=0;i<resolution;++i)
@@ -67,6 +62,7 @@ void *generateWave()
 
 				if (dummy > 0.0)
 				{
+					//scaling 
 					dummy = ((amplitude/MAX_AMP))*0xffff;
 				}
 				else 
@@ -85,25 +81,21 @@ void *generateWave()
 		t_delta.tv_sec = 0;
 		t_delta.tv_nsec = delta_t*1000000000;
 
+		//inner while loop to push to DAC port-> oscilloscope
 		while(1)
 		{
-
 			//setting control register to unipolar 5V
 			out16(DA_CTLREG,0x0a23);		
 			//clearing buffer				
 		   	out16(DA_FIFOCLR, 0);
 			//outputting data to DA port
-			
-		    out16(DA_Data,data[i]);
-		    
+		    	out16(DA_Data,data[i]);
 			//suspenduing CPU to adjust frequency of wave
 			nanospin(&t_delta);
-			//to adjust output frequency to oscilloscope		  
-		
 			//incrementing counter
 			++i;
 
-			//re adjusting counter to 0 when greater than no of points
+			//re adjusting counter to 0 when greater than no of point
 			if (i>=resolution)
 			{
 				i=0;
@@ -126,6 +118,7 @@ void *generateWave()
 			}	
 			if(pthread_mutex_trylock(&global_stop_mutex)==0)
 			{
+				//if ctrl+C has been pressed
 				if (kill_switch==1)
 				{
 					pthread_mutex_unlock(&global_stop_mutex);
@@ -136,9 +129,9 @@ void *generateWave()
 		}
 
 		//checking mutex to access state of global kill switch 
-		
 		if(pthread_mutex_trylock(&global_stop_mutex)==0)
 		{
+			//if Ctrl+c has been pressed
 			if (kill_switch==1)
 			{
 				pthread_mutex_unlock(&global_stop_mutex);
@@ -152,8 +145,9 @@ void *generateWave()
 	out16(DA_CTLREG,(short)0x0a23);	
 	out16(DA_FIFOCLR,0);			
 	out16(DA_Data, 0x0000);
-
+	
+	//detach pci bus
 	pci_detach_device(hdl);		
-																																																															
+																																																														
 }
 
