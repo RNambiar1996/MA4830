@@ -109,6 +109,11 @@ void led(uint16_t lvl){
 }
 
 void *read_input(){
+  bool waveform_prev;
+
+  //init hardware
+  pci_setup();
+  dio_setup();
 
   //uint8_t f_values[100];
   //uint8_t f_sum = 0;
