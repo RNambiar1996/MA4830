@@ -4,24 +4,6 @@
 #include "System.h"
 #include "hardware.h"
 
-#include <string.h>
-#include <stdlib.h>
-// #include <stdint.h>
-#include <stdbool.h>
-//#include <atomic.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <signal.h>
-#include <errno.h>
-#include <pthread.h>
-#include <time.h>
-
-#include <sys/neutrino.h>
-#include <process.h>
-#include <sched.h>
-
 // under global_var_mutex
 uint8_t global_frequency;
 uint8_t global_amplitude;
@@ -58,21 +40,11 @@ uintptr_t iobase[6];
 struct pci_dev_info info;
 void *hdl;
 
-// global variable for only this source code
-//bool info_switch_prev;         // for debounce
-bool calibration_flag = false; // to check whether user wants to calibrate potentiometer
-
 int system_init(const char *file_param)
 {
-	struct sched_param  params;
-	int policy;
-
-    // local variables
-    bool calibrate;
-
     // Variables to read file_param
     FILE *fp;            // file pointer
-    char str_buffer[64];
+    char str_buffer[64]; // buffer to read file
     char *temp_str;      // temp string variable to help parse file
     int line_length = 0; // size of line
     int count;           // for loop counter
@@ -89,11 +61,6 @@ int system_init(const char *file_param)
 
     // initializations
     kill_switch = false;  // for ctrl + c
-    //waveform = 0;         // waveform defaults to 0, which is sine wave
-
-	//sched_getparam(0, &params);
-	//params.sched_priority+=1;
-	//sched_setscheduler(0,SCHED_RR,&params);
 		
     // Check validity of file_param
     if ( strcmp(file_param, "0") ) // if file_param is not "0"
@@ -106,7 +73,7 @@ int system_init(const char *file_param)
         // malloc to temp string pointer
         temp_str = (char *) malloc(64);
 
-       while ( true )
+        while ( true )
         {
             // get entire line first
             while( (str_buffer[line_length] = getc(fp)) != '\n' &&  str_buffer[line_length] != EOF)
@@ -131,7 +98,7 @@ int system_init(const char *file_param)
                 global_amplitude = strtol( temp_str, NULL, 10); // set value
             }
 
-            if ( str_buffer[line_length] == EOF )
+            if ( str_buffer[line_length] == EOF ) // exit when EOF has been found
             	break;
 
             // clear string buffer, and line length variables for next iteration
@@ -185,12 +152,6 @@ int system_init(const char *file_param)
     while( hardware_ready == false ) pthread_cond_wait( &hardware_ready_cond, &global_var_mutex );
     pthread_mutex_unlock(&global_var_mutex);
     
-    // get the current info_switch state (at this point, read_input() thread has updated it)
-    // pthread_mutex_lock(&global_stop_mutex);
-    // info_switch_prev = info_switch; // for debounce
-    // //printf("\n\n\n\n\n\n\n first infos: %d infos_p: %d \n\n\n\n\n\n", info_switch, info_switch_prev);
-    // pthread_mutex_lock(&global_stop_mutex);
-
     if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &generateWave, NULL ) ) // returns 0 on success
     //if( pthread_create( &oscilloscope_thread_handle, &joinable_attr, &hardware_handle_func, NULL ) ) // returns 0 on success
     {
@@ -212,24 +173,10 @@ int system_init(const char *file_param)
         exit(EXIT_FAILURE);
     }
 
-	//printf("\n\n\n\n\n\n\n endsysteminit infos: %d infos_p: %d \n\n\n\n\n\n", info_switch, info_switch_prev);
-
     return 0; // successfully init all threads
 }
 
-void parse_calibration_flag(const char *calib_arg)
-{
-    calibration_flag = strcmp(calib_arg, "0");
-}
 
-void print_arg_parse_error()
-{
-	printf("Please enter only up to 2 arguments in the following format:\n");
-	printf("Arg1: [0 to use analog/digital inputs, or path of parameter file, to reuse old parameters]\n");
-	printf("Arg2: [1 to undergo calibration procedure for potentiometer if Arg1 is not 0]\n");
-    printf("If Arg1 is 0, Arg2 is not needed.\n");
-    exit(EXIT_FAILURE);
-}
 
 void signal_handling_setup()
 {
@@ -321,19 +268,17 @@ void INThandler(int sig) // handles SIGINT
 void flush_input()
 {
     char flush_ch;
-    while ( (flush_ch = getchar()) != '\n' );//&& flush_ch != EOF );
+    while ( (flush_ch = getchar()) != '\n' );
 }
 
 void check_info_switch()
 {
     pthread_mutex_lock( &global_stop_mutex );
 
-    if ( info_switch ) // checks for info_switch toggle
-        system_pause = true;
+    if ( info_switch )       // checks for info_switch toggle
+        system_pause = true; // copies info_switch state to system_pause, to not hog mutex
 
     pthread_mutex_unlock( &global_stop_mutex );
-
-	//printf("c");
 
     // no need mutex, only main thread writes to system_pause variable, and only main thread calls this function
     if ( system_pause )
