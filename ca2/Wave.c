@@ -11,9 +11,6 @@ void *generateWave()
 
 	unsigned int i;
 	unsigned int data[1000];
-	
-	//unsigned short i;
-	//unsigned short data[1000];
 
 	struct timespec t_delta;
 	
@@ -25,7 +22,6 @@ void *generateWave()
 	  perror("Thread Control");
 	  exit(1);
 	  }	
-	
 	
 	//find waveform points
 	delta = (2.0*PI)/((float)resolution);
@@ -44,14 +40,13 @@ void *generateWave()
 
 		//unlocking the mutex
 		pthread_mutex_unlock(&global_var_mutex);
-		/*
-		if (frequency == 0)
+	
+		if (frequency == 0.0)
 		    frequency = FREQUENCY_MIN;
 		else if (frequency == 255)
 		    frequency = FREQUENCY_MAX;
-		else*/
-		    //frequency = ((float)frequency_8bit/255.0) * FREQUENCY_MAX;
-		    frequency = (frequency/255.0) * FREQUENCY_MAX;
+		else
+		    frequency = (FREQUENCY_MAX-FREQUENCY_MIN)*frequency/245.0 + 1.0 - (FREQUENCY_MAX-FREQUENCY_MIN)*10.0/245.0;
 
 		//sine wave
 		if (waveType == 0)
