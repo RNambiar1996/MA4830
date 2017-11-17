@@ -43,8 +43,6 @@ void *generateWave()
 	
 		if (frequency == 0.0)
 		    frequency = FREQUENCY_MIN;
-		else if (frequency == 255)
-		    frequency = FREQUENCY_MAX;
 		else
 		    frequency = (FREQUENCY_MAX-FREQUENCY_MIN)*frequency/245.0 + 1.0 - (FREQUENCY_MAX-FREQUENCY_MIN)*10.0/245.0;
 
