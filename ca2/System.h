@@ -18,9 +18,6 @@
 // system init
 int system_init(const char *file_param);
 
-
-
-
 // setup signal handling variables
 void signal_handling_setup();
 
@@ -37,10 +34,10 @@ void flush_input();
 void check_info_switch();
 
 // Print.c function prototypes
+void print_arg_parse_error();   // for arg parsing error
 void printInit();               // print initial messages
 void printSave();               // print this is pause switch is toggled
 void printCurrent();            // print the current frequency and amplitude values
 int  outputFile();              // function outputs file, returns 0 on success, return -1 on error
-void print_arg_parse_error();   // for arg parsing error
 
 #endif

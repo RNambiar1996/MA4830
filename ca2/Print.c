@@ -13,8 +13,17 @@ bool previous_local_waveform;
 double real_frequency;
 double real_amplitude;
 
-//print INitial lines
-void printInit(){
+//print parse error
+void print_arg_parse_error()
+{
+	printf("Please enter only 1 argument in the following format:\n");
+	printf("Arg1: [0 to use analog/digital inputs, or path of parameter file, to reuse old parameters]\n");
+    exit(EXIT_FAILURE);
+}
+
+//print Initial lines
+void printInit()
+{
 	printf("\33[2J"); // clears screen
     printf("---------- Welcome to the G-code. This program outputs waveform to the oscilloscope. ----------\n");
     printf("       __________                                                  _ _  \n");
@@ -95,7 +104,7 @@ void printSave(){  // display save instructions
     pthread_mutex_lock( &global_stop_mutex );
     system_pause = false;
     info_switch = false;
-    pthread_cond_signal(&info_switch_cond);
+    pthread_cond_signal(&info_switch_cond);     // signal hardware thread to wake up
     pthread_mutex_unlock( &global_stop_mutex );
     
     pthread_mutex_lock(&print_mutex);
@@ -142,7 +151,7 @@ void printCurrent()
 
     	for ( count = 0; count < 3; ++ count )
     	{
-        	printf("\33[1A");     //move cursor up 1 line
+        	printf("\33[1A");    //move cursor up 1 line
     		printf("%c[2K", 27); //clear entire line
     	}
 
@@ -159,13 +168,12 @@ void printCurrent()
     }
 }
 
-
 //output user's current param to file 
 int outputFile(){
-    //for output of time in file
-    time_t Time = time(NULL);
-    struct tm tme = *localtime(&Time);
+    //for output of time in file, and file path
     char *path = "./output.txt";
+    time_t Time = time(NULL);
+    struct tm time_struct = *localtime(&Time);
       
 	FILE *fptr;
     fptr = fopen(path, "w");
@@ -188,14 +196,4 @@ int outputFile(){
     printf("File saved!\n");
 
 	return 0;
-}
-
-//print parse error
-void print_arg_parse_error()
-{
-	printf("Please enter only up to 2 arguments in the following format:\n");
-	printf("Arg1: [0 to use analog/digital inputs, or path of parameter file, to reuse old parameters]\n");
-	printf("Arg2: [1 to undergo calibration procedure for potentiometer if Arg1 is not 0]\n");
-    printf("If Arg1 is 0, Arg2 is not needed.\n");
-    exit(EXIT_FAILURE);
 }

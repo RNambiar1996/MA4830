@@ -3,12 +3,9 @@
  * Maintainer of "Main.c": Lee Ee Wei
  * Compile line(on QNX): cc -o The_G_Code Main.c System.c Print.c Input.c wave.c -lm
  *  
- * Note:
- * - When done remove these from System.h and System.c
- *      void* hardware_handle_func(void*);
- *      void* output_osc_func(void*);
- * - Change wave.c to Wave.c
- * - Check which header files are not needed and remove, and try to only include C headers in our own header files instead of source code
+ * FAQ:
+ * bool info_switch variable is not called pause_switch due to legacy
+ *
  */
 
 #include "Global.h"
