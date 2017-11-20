@@ -29,12 +29,15 @@ void *generateWave()
 	{	
 		//locking the mutex to update local parameters to global parameters
 		pthread_mutex_lock(&global_var_mutex);
-		frequency = (float)global_frequency;
-		amplitude = (float)global_amplitude;
+		frequency_8bit = global_frequency;
+		amplitude_8bit = global_amplitude;
 		waveType = waveform;
 		//unlocking the mutex
 		pthread_mutex_unlock(&global_var_mutex);
-	
+		
+		frequency = (float)frequency_8bit;
+		amplitude = (float)amplitude_8bit;
+		
 		//mapping potentiometer values to output frequency range
 		if (frequency == 0.0)
 		    frequency = FREQUENCY_MIN;
