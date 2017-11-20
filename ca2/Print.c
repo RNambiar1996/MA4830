@@ -190,7 +190,7 @@ int outputFile(){
         return -1;
 	}
 
-    fprintf(fptr,"##Manually editting this file is not recommended\n");
+    fprintf(fptr,"##Manually editing this file is not recommended\n");
     fprintf(fptr,"##Output Param at: %d-%d-%d %d:%d.\n", tme.tm_year-100, tme.tm_mon+1, tme.tm_mday, tme.tm_hour, tme.tm_min);
     fprintf(fptr,"-Human readable form\n");
     fprintf(fptr,"Frequency: %lfHz\n", global_frequency*FREQUENCY_MAX/255.0);
