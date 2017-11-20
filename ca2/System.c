@@ -18,7 +18,7 @@ bool info_switch = 0;
 bool system_pause;
 
 // shared across threads, but constant after system_init()
-bool reuse_param;          // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
+bool reuse_param;           // bool to check whether param file is used, if yes, do not catch ctrl + s signal, and do not save backup, will only write once, no need atomic
 sigset_t all_sig_mask_set; // set of signals to block all signals for all except 1 thread, the 1 thread will do signal handling
 
 // Mutexes
@@ -43,11 +43,11 @@ void *hdl;
 int system_init(const char *file_param)
 {
     // Variables to read file_param
-    FILE *fp;            // file pointer
+    FILE *fp;                  // file pointer
     char str_buffer[64]; // buffer to read file
-    char *temp_str;      // temp string variable to help parse file
-    int line_length = 0; // size of line
-    int count;           // for loop counter
+    char *temp_str;       // temp string variable to help parse file
+    int line_length = 0;  // size of line
+    int count;                // for loop counter
     
     char *end_str;
 
@@ -198,6 +198,10 @@ void system_shutdown()
     // initiating all threads shutdown
     pthread_mutex_lock( &global_stop_mutex );
     kill_switch = true;
+    // read_input thread might be waiting for info switch to be false, make sure it wakes up
+    system_pause = false;
+    info_switch = false;
+    pthread_cond_signal(&info_switch_cond);     // signal hardware thread to wake up
     pthread_mutex_unlock( &global_stop_mutex );
 
     // waiting for all threads to join

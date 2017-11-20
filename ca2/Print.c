@@ -80,13 +80,6 @@ void printSave(){
         printf("Shutting down program!\n");
         pthread_mutex_unlock( &print_mutex );
         
-        // wakes hardware input thread up to check kill_switch and terminate
-        pthread_mutex_lock( &global_stop_mutex );
-    	system_pause = false;
-    	info_switch = false;
-    	pthread_cond_signal(&info_switch_cond);     // signal hardware thread to wake up
-    	pthread_mutex_unlock( &global_stop_mutex );
-        
         system_shutdown();
     }
     else if( !strcmp(input, "s") || !strcmp(input, "S") )
