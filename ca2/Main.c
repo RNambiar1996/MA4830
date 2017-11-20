@@ -1,7 +1,7 @@
 /*
+ * Program name: Gcode
  * Group members: Tan You Liang, Nicholas Adrian, Rahul Nambiar, Lee Ee Wei
- * Maintainer of "Main.c": Lee Ee Wei
- * Compile line(on QNX): cc -o The_G_Code Main.c System.c Print.c Input.c wave.c -lm
+ * Compile line(on QNX): cc -o Gcode Main.c System.c Print.c Input.c wave.c -lm
  *  
  * FAQ:
  * bool info_switch variable is not called pause_switch due to legacy

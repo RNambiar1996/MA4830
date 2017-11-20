@@ -42,7 +42,7 @@ void *generateWave()
 		if (frequency == 0.0)
 		    frequency = FREQUENCY_MIN;
 		else
-		    frequency = (FREQUENCY_MAX-FREQUENCY_MIN)*frequency/255.0;
+		    frequency = (FREQUENCY_MAX)*frequency/255.0;
 
 		//sine wave
 		if (waveType == 0)
